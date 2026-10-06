@@ -1,0 +1,31 @@
+# Local-only secrets and environment files
+.env
+.env.*
+!.env.example
+secrets/
+
+# Python/tooling artifacts (production code is not permitted before 17 Oct 2026)
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Generated data, models, logs, and evidence
+data/
+models/
+logs/
+evidence/
+*.pcap
+*.pcapng
+*.gguf
+*.onnx
+
+# Editors and operating systems
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
