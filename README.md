@@ -4,12 +4,30 @@ SentinelWard is Team TessNova's IBM Z Datathon 2026 project: a real-time system 
 
 ## Repository status
 
-This repository currently contains **Phase 0 design material only**.
+This repository contains the **Phase 1 foundation implementation** on the
+`phase/1-foundation` branch.
 
-- No SentinelWard production code may be written before **17 October 2026**.
-- Do not commit, create a remote, or push this repository until Aditya explicitly requests it.
+- Phase 1 implementation began on **8 October 2026** at Aditya's explicit direction.
+- The initial Phase 0 commit was pushed after Aditya's approval; commit or push subsequent changes only on explicit request.
 - Toy learning exercises must remain outside this repository and must not use SentinelWard logic or data.
 - The locked team contract remains `Doc 00 v1`. Files here explain and validate it; they do not silently replace it.
+
+## Phase 1 quick start
+
+```powershell
+uv sync --extra dev
+uv run sentinelward validate-config
+uv run pytest
+```
+
+Database-backed verification additionally requires PostgreSQL:
+
+```powershell
+$env:SENTINEL_DATABASE_URL = "postgresql://user@host:5432/sentinelward"
+uv run sentinelward db upgrade
+uv run sentinelward db init-checkpointer
+uv run sentinelward smoke-test
+```
 
 ## Aditya's ownership
 
@@ -25,6 +43,7 @@ This repository currently contains **Phase 0 design material only**.
 
 - [Architecture](docs/architecture.md)
 - [Canonical contracts and naming](docs/contracts.md)
+- [One-line output compatibility](docs/one-line-output.md)
 - [Agent registry and permissions](docs/agent-registry.md)
 - [Team handoffs](docs/handoffs.md)
 - [M6 design](docs/m6-design.md)
@@ -33,6 +52,11 @@ This repository currently contains **Phase 0 design material only**.
 - [Local environment inventory](docs/local-environment.md)
 - [Phase 0 verification evidence](docs/phase-0-evidence.md)
 - [Phase 0 completion checklist](docs/phase-0-checklist.md)
+- [Phase 1 architecture](docs/phase-1-architecture.md)
+- [Phase 1 implementation and handoffs](docs/phase-1-implementation.md)
+- [Phase 1 completion checklist](docs/phase-1-checklist.md)
+- [Operations runbook](docs/runbook.md)
+- [Complete Phase 0–1 technical summary](docs/phases-0-1-complete-summary.md)
 - [Contract examples](fixtures/contract-examples.json)
 
 ## Non-negotiable safety rules
@@ -43,4 +67,3 @@ This repository currently contains **Phase 0 design material only**.
 4. Automation never controls treatment, medication, pumps or ventilators.
 5. Official reports are drafted automatically but sent only by a person.
 6. SentinelWard listens to monitor data and never writes commands back to a monitor.
-

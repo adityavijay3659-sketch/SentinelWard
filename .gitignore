@@ -4,12 +4,15 @@
 !.env.example
 secrets/
 
-# Python/tooling artifacts (production code is not permitted before 17 Oct 2026)
+# Python/tooling artifacts
 __pycache__/
 *.py[cod]
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
 .venv/
 venv/
 
@@ -28,4 +31,3 @@ evidence/
 .vscode/
 .DS_Store
 Thumbs.db
-

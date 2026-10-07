@@ -2,7 +2,12 @@
 
 This is the execution order for 17–18 October 2026. Phase boundaries are acceptance gates, not merely elapsed-time targets. If a gate fails, preserve the last working checkpoint and reduce optional scope instead of weakening a safety rule.
 
-## Phase 1 — Foundation, hours 0–2
+## Phase 1 — Expanded whole-team foundation
+
+Phase 1 is gate-based rather than restricted to hours 0–2. The automation service is a
+Python 3.12 modular monolith in the shared repository, deployed to LinuxONE with systemd.
+Live MQTT, PostgreSQL and backend integration are required for the final gate; deterministic
+fake adapters remain mandatory for Telegram and device-control effects until their later phases.
 
 Build:
 
@@ -13,7 +18,9 @@ Build:
 - policy guard, checkpoint persistence, action audit and undo registry;
 - fake adapters for Telegram, backend events and Mosquitto control.
 
-Gate: a fixture verdict creates one allowed action, rejects an unauthorized action and recovers after restart without duplication.
+Gate: on LinuxONE, a live-broker verdict creates one allowed simulated action, rejects an
+unauthorized action and recovers from PostgreSQL after restart without duplication. The live
+backend endpoint must accept a valid event and reject invalid or unauthenticated requests.
 
 ## Phase 2 — A1 alert ladder, hours 2–6
 

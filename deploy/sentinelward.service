@@ -1,0 +1,23 @@
+[Unit]
+Description=SentinelWard automation service
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=sentinelward
+Group=sentinelward
+WorkingDirectory=/opt/sentinelward
+EnvironmentFile=/etc/sentinelward/sentinelward.env
+ExecStart=/opt/sentinelward/.venv/bin/sentinelward serve
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/sentinelward
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target
