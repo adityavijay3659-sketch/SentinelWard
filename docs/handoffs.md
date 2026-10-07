@@ -4,6 +4,15 @@
 
 Every integration starts against a fixture and an adapter. Switching from fixture to live teammate service must not change workflow logic.
 
+## Output compatibility rule
+
+- Teammate services exchange and persist the canonical JSON; they do not parse the human-readable line to recover data.
+- The automation service derives the same one-line view for logs, Telegram previews, screens and handoff evidence using the fixed renderer in `contracts.md`.
+- Producers send canonical IDs, timestamps, enums and correlation IDs. They do not create their own prose variants.
+- Antra may display the derived line, while the backend retains the source JSON and correlation ID for drill-down and audit.
+- Granite may write narrative briefings and report drafts, but never operational statuses, identifiers, verdicts or action results.
+- Integration tests compare the JSON first and then check that its derived line is one physical line and no longer than 160 characters.
+
 ## Aditya Singh — platform and backend
 
 Aditya needs:
@@ -75,6 +84,7 @@ Aditya provides:
 - stable alert identity and ladder state;
 - acknowledgement and escalation events;
 - typed screen-facing artifacts with correlation IDs;
+- deterministic one-line summaries derived from those typed artifacts;
 - Granite text plus a flag showing Granite or template provenance.
 
 Joint acceptance: acknowledgement from screen or Telegram stops the same ladder, updates the same alert and never creates a duplicate event.
@@ -91,4 +101,3 @@ Joint acceptance: acknowledgement from screen or Telegram stops the same ladder,
 | Hour 19 | golden scenarios and final measurements complete | whole team |
 
 Between checkpoints, teammates work against fixtures. Contract changes are batched for a checkpoint instead of interrupting everyone continuously.
-

@@ -76,7 +76,10 @@ M6 is a model service, not an LLM agent. It publishes a score to the decision la
    - Telegram adapter for A1;
    - Mosquitto control adapter used only by Kartik's A2 handler;
    - internal backend event adapter for reports, tickets, workload and briefings;
+   - deterministic one-line presentation renderer for logs, screens and handoff evidence;
    - Granite writer adapter with a deterministic template fallback.
+
+The one-line renderer consumes validated typed events after policy/routing decisions. It is a display projection only: integrations continue to exchange canonical JSON, and no workflow may parse the line to make a decision.
 
 ## Configuration profiles
 
@@ -101,4 +104,3 @@ Configuration may change timing, URLs and credentials. It may not change allow-l
 7. Failure tests and full demonstration.
 
 A9, predictive maintenance and n8n visualization remain outside the critical path.
-

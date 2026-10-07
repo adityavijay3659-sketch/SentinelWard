@@ -75,6 +75,39 @@ Only these values are valid on `ward/bed/<bed_id>/verdict`:
 - An undo is a new `ward/action` record whose `undoes` references the original `action_id`.
 - A failed attempt is also logged, with `result="failed"`; failures are never hidden by retry.
 
+## Canonical one-line presentation
+
+Machine-to-machine compatibility continues to use the locked JSON messages above. For logs, dashboards, Telegram previews and handoffs, every message may also be rendered as one deterministic human-readable line:
+
+```text
+HH:MM:SS UTC | SUBJECT | SOURCE EVENT | KEY FACT | RESULT_OR_NEXT
+```
+
+This is a derived presentation, not a new wire field or replacement payload, so it does not require a v1 contract change. The original validated JSON and correlation identifiers remain authoritative.
+
+Rendering rules:
+
+- Use a fixed template renderer; Granite must not generate operational status lines.
+- Derive time from `ts` in UTC.
+- Use `bed_id` as `SUBJECT`; otherwise use `device_id`, incident ID or staff ID in that order.
+- Keep canonical verdicts, agent IDs, actions and states uppercase.
+- Replace tabs and line breaks with spaces, collapse repeated spaces and exclude patient names or other PHI.
+- Limit the complete line to 160 characters. Shorten `KEY FACT` first and append `...`; never remove subject, source event or result.
+- Use stable results such as `OPEN`, `PENDING`, `ACKNOWLEDGED`, `FAILED`, `COMPLETE`, `UNDO AVAILABLE`, `HUMAN REVIEW` and `HUMAN SEND REQUIRED`.
+
+Field mapping by source:
+
+| Source | `SOURCE EVENT` | `KEY FACT` | `RESULT_OR_NEXT` |
+|---|---|---|---|
+| `score` | `<model_id> <state> <score>` | sanitized `reason` | configured review/action |
+| `verdict` | `VERDICT <verdict> <confidence>` | joined canonical reasons | routed agents/action |
+| `action` | `<agent_id> <action>` | target and safe detail | action result plus undo state |
+| `alert` | `A1 <kind> L<level>` | recipient or acknowledgement detail | ladder state |
+| `bedside` | `BEDSIDE <result>` | confirming staff ID | workflow state |
+| internal event | `<source_agent> <event_type>` | subtype summary | persisted workflow state |
+
+The normative Phase 0 examples and integration guidance are in [One-line output compatibility](one-line-output.md) and `fixtures/one-line-output-examples.json`.
+
 ## Proposed internal backend event envelope
 
 This does not replace a locked MQTT message. It carries screen-facing artifacts that have no locked write topic.
@@ -105,4 +138,3 @@ Allowed `event_type` families are `ticket.*`, `report.*`, `workload.*`, `briefin
 4. Bump the affected contract version if a locked interface changes.
 5. Update fixtures and contract tests before implementation.
 6. Notify all producers and consumers with an agreed switchover checkpoint.
-

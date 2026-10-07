@@ -6,7 +6,7 @@ Phase 0 is complete only when every required item below is checked. Documentatio
 
 ## Completed locally
 
-- [x] Local repository created with no remote and no commit.
+- [x] Repository created and the approved initial Phase 0 commit pushed.
 - [x] Pre-17 October no-code rule recorded.
 - [x] LangGraph selected as the sole runtime framework.
 - [x] Runtime boundaries and critical path documented.
@@ -16,6 +16,8 @@ Phase 0 is complete only when every required item below is checked. Documentatio
 - [x] M6 data, method, safety precedence and evaluation plan documented.
 - [x] Failure, degradation and prompt-injection policies documented.
 - [x] Canonical v1 example fixtures prepared.
+- [x] One-line presentation compatibility defined without changing the locked v1 JSON.
+- [x] Per-automation one-line examples validated as single-line output within 160 characters.
 
 ## Required teammate confirmations
 
@@ -45,9 +47,10 @@ These exercises must be unrelated toys outside this repository.
 ## Phase 0 exit review
 
 - [x] All locked versus proposed contracts are clearly labelled.
+- [x] Human-readable output compatibility is documented and fixture-testable.
 - [ ] Every live dependency has a fixture or mockable adapter boundary.
-- [x] No production code, secrets, patient data, model binary or generated evidence exists in the repository.
+- [x] At the Phase 0 exit, no production code, secrets, patient data, model binary or generated evidence existed in the repository.
 - [ ] Whole-team paper walkthrough completed.
-- [ ] Aditya explicitly authorizes the first commit/push when allowed.
+- [x] Aditya explicitly authorized the first commit/push.
 
-All independently executable work on Aditya's current machine is complete. The repository remains **Phase 0 locally verified, external access and team validation pending** and must not be pushed.
+All independently executable work on Aditya's current machine is complete. The repository remains **Phase 0 locally verified, external access and team validation pending**. Later changes are pushed only when Aditya explicitly requests it.

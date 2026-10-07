@@ -1,0 +1,78 @@
+{
+  "fixture_set": "phase0-one-line-v1",
+  "authority": "derived display projection; canonical JSON remains authoritative",
+  "format": "HH:MM:SS UTC | SUBJECT | SOURCE EVENT | KEY FACT | RESULT_OR_NEXT",
+  "max_characters": 160,
+  "examples": [
+    {
+      "id": "verdict_tampering",
+      "source_type": "verdict",
+      "line": "14:05:20 UTC | B07 | VERDICT TAMPERING 0.88 | trust 0.12; replay and sender changed | A1 HAND-CHECK + A2 ISOLATE"
+    },
+    {
+      "id": "a1_alert_sent",
+      "source_type": "alert",
+      "line": "14:05:21 UTC | B03 | A1 EMERGENCY L1 | sent to staff:priya | OPEN"
+    },
+    {
+      "id": "a1_alert_acknowledged",
+      "source_type": "alert",
+      "line": "14:05:51 UTC | B03 | A1 ACK | staff:priya responded in 30 s | ACKNOWLEDGED"
+    },
+    {
+      "id": "a2_containment",
+      "source_type": "action",
+      "line": "14:05:22 UTC | MON-07 | A2 DISABLE_CLIENT | isolated after TAMPERING | COMPLETE; UNDO AVAILABLE"
+    },
+    {
+      "id": "a3_evidence",
+      "source_type": "internal_event",
+      "line": "14:05:24 UTC | MON-07 | A3 EVIDENCE | 4 files frozen and hashed | COMPLETE"
+    },
+    {
+      "id": "a4_fleet_hunt",
+      "source_type": "internal_event",
+      "line": "14:05:25 UTC | MON-07 | A4 FLEET HUNT | 3 same-model devices watched for 1 h | HUMAN REVIEW"
+    },
+    {
+      "id": "a5_cert_in_draft",
+      "source_type": "internal_event",
+      "line": "14:12:00 UTC | INC-004 | A5 CERT-IN DRAFT | all fields filled; 5h53m left | HUMAN SEND REQUIRED"
+    },
+    {
+      "id": "a6_biomed_ticket",
+      "source_type": "internal_event",
+      "line": "14:06:00 UTC | MON-06 | A6 BIOMED TICKET | ART drift; re-level and re-zero | OPEN"
+    },
+    {
+      "id": "a7_workload",
+      "source_type": "internal_event",
+      "line": "14:10:00 UTC | staff:priya | A7 WORKLOAD | 43 alerts in 2 h | HUMAN REVIEW"
+    },
+    {
+      "id": "a8_briefing",
+      "source_type": "internal_event",
+      "line": "19:00:00 UTC | SHIFT-DAY | A8 BRIEFING | 2 incidents; 1 untrusted bed; 3 tickets | READY"
+    },
+    {
+      "id": "granite_writer",
+      "source_type": "internal_event",
+      "line": "19:00:01 UTC | SHIFT-DAY | GRANITE WRITER | verified briefing text generated | COMPLETE"
+    },
+    {
+      "id": "m6_drifting",
+      "source_type": "score",
+      "line": "14:05:20 UTC | B06 | M6 DRIFTING 0.91 | ART is 12 mmHg above cuff | BIOMED CHECK"
+    },
+    {
+      "id": "bedside_confirmation",
+      "source_type": "bedside",
+      "line": "14:06:10 UTC | B07 | BEDSIDE PATIENT_OK | confirmed by staff:priya | WORKFLOW UPDATED"
+    },
+    {
+      "id": "delivery_retry",
+      "source_type": "delivery",
+      "line": "14:06:11 UTC | evt_0042 | DELIVERY RETRY | backend unavailable; attempt 2 | PENDING"
+    }
+  ]
+}
