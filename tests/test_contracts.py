@@ -87,3 +87,19 @@ def test_priority_must_match_verdict(contract_fixture: dict[str, Any]) -> None:
     raw["priority"] = "low"
     with pytest.raises(ValueError, match="does not match"):
         VerdictMessage.model_validate(raw)
+
+
+def test_alert_ladder_is_strictly_limited_to_three_steps(
+    contract_fixture: dict[str, Any],
+) -> None:
+    raw = dict(contract_fixture["alert"])
+    raw["ladder_step"] = 4
+    with pytest.raises(ValueError):
+        AlertMessage.model_validate(raw)
+
+
+def test_bedside_result_rejects_unlocked_aliases(contract_fixture: dict[str, Any]) -> None:
+    raw = dict(contract_fixture["bedside_check"])
+    raw["result"] = "patient_safe"
+    with pytest.raises(ValueError):
+        BedsideCheckMessage.model_validate(raw)

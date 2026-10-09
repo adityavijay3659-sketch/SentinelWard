@@ -121,6 +121,23 @@ class InMemoryStore:
         }
         return True
 
+    async def due_mqtt_outbox(self, limit: int = 100) -> list[dict[str, Any]]:
+        due = [
+            {"delivery_key": key, **value}
+            for key, value in self.outbox.items()
+            if value["destination"].startswith("mqtt:") and value["status"] in {"pending", "failed"}
+        ]
+        return due[:limit]
+
+    async def mark_outbox_delivered(self, delivery_key: str) -> None:
+        self.outbox[delivery_key]["status"] = "delivered"
+
+    async def reschedule_outbox(self, delivery_key: str, *, error: str, delay_seconds: int) -> None:
+        event = self.outbox[delivery_key]
+        event["status"] = "failed"
+        event["last_error"] = error[:240]
+        event["delay_seconds"] = delay_seconds
+
     async def ping(self) -> bool:
         return True
 
@@ -281,6 +298,52 @@ class PostgresStore:
                 (uuid4(), delivery_key, destination, Jsonb(payload), correlation_id),
             )
             return await cursor.fetchone() is not None
+
+    async def due_mqtt_outbox(self, limit: int = 100) -> list[dict[str, Any]]:
+        query = """
+            SELECT delivery_key, destination, payload, attempt_count
+            FROM automation.outbox_events
+            WHERE destination LIKE 'mqtt:%%'
+              AND status IN ('pending', 'failed')
+              AND next_attempt_at <= now()
+              AND attempt_count < 5
+            ORDER BY next_attempt_at, created_at
+            LIMIT %s
+        """
+        async with await psycopg.AsyncConnection.connect(self.database_url) as connection:
+            cursor = await connection.execute(query, (limit,))
+            rows = await cursor.fetchall()
+        return [
+            {
+                "delivery_key": str(row[0]),
+                "destination": str(row[1]),
+                "payload": row[2],
+                "attempt_count": int(row[3]),
+            }
+            for row in rows
+        ]
+
+    async def mark_outbox_delivered(self, delivery_key: str) -> None:
+        query = """
+            UPDATE automation.outbox_events
+            SET status = 'delivered', updated_at = now(), last_error = NULL
+            WHERE delivery_key = %s
+        """
+        async with await psycopg.AsyncConnection.connect(self.database_url) as connection:
+            await connection.execute(query, (delivery_key,))
+
+    async def reschedule_outbox(self, delivery_key: str, *, error: str, delay_seconds: int) -> None:
+        query = """
+            UPDATE automation.outbox_events
+            SET status = 'failed',
+                attempt_count = attempt_count + 1,
+                next_attempt_at = now() + make_interval(secs => %s),
+                last_error = %s,
+                updated_at = now()
+            WHERE delivery_key = %s
+        """
+        async with await psycopg.AsyncConnection.connect(self.database_url) as connection:
+            await connection.execute(query, (delay_seconds, error[:240], delivery_key))
 
     async def ping(self) -> bool:
         try:

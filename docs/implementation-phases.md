@@ -2,6 +2,13 @@
 
 This is the execution order for 17–18 October 2026. Phase boundaries are acceptance gates, not merely elapsed-time targets. If a gate fails, preserve the last working checkpoint and reduce optional scope instead of weakening a safety rule.
 
+Aditya subsequently authorized local implementation ahead of these event dates.
+The dates describe the original event schedule, not a current prohibition.
+The [audience output contract](one-line-output.md) applies to every phase: one
+deterministic human/team line <=160 characters, complete machine JSON, clear
+urgency, evidence-backed outcomes and explicit missing or unvalidated state.
+Each remaining phase must verify those requirements before its gate can pass.
+
 ## Phase 1 — Expanded whole-team foundation
 
 Phase 1 is gate-based rather than restricted to hours 0–2. The automation service is a

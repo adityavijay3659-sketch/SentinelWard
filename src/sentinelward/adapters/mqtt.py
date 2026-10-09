@@ -29,10 +29,12 @@ class MqttAdapter:
         password: str | None = None,
         tls: bool = True,
         ca_file: Path | None = None,
+        m6_enabled: bool = False,
     ) -> None:
         self._host = host
         self._port = port
         self._keepalive = keepalive
+        self._m6_enabled = m6_enabled
         self._handler = handler
         self._event_loop = event_loop
         self._connected = asyncio.Event()
@@ -98,6 +100,8 @@ class MqttAdapter:
             ("ward/bed/+/score/M3", 1),
             ("ward/bed/+/score/M5", 1),
         ]
+        if self._m6_enabled:
+            subscriptions.append(("ward/bed/+/vitals", 0))
         result, _ = client.subscribe(subscriptions)
         if result == mqtt.MQTT_ERR_SUCCESS:
             self._event_loop.call_soon_threadsafe(self._connected.set)

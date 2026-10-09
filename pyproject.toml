@@ -4,12 +4,13 @@ build-backend = "hatchling.build"
 
 [project]
 name = "sentinelward"
-version = "0.1.0"
+version = "0.3.1"
 description = "Restart-safe automation foundation for SentinelWard"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [
   "alembic>=1.14,<2",
+  "apscheduler==3.11.3",
   "fastapi>=0.115,<1",
   "httpx>=0.28,<1",
   "langgraph==1.2.14",
@@ -19,10 +20,13 @@ dependencies = [
   "psycopg[c]==3.3.6; platform_machine == 's390x'",
   "pydantic>=2.13,<3",
   "pydantic-settings>=2.11,<3",
+  "python-telegram-bot==22.8",
+  "sqlalchemy>=2.1.3,<2.2",
   "uvicorn>=0.32,<1",
 ]
 
 [project.optional-dependencies]
+research = ["scikit-learn==1.9.1"]
 dev = [
   "mypy>=1.15,<2",
   "pytest>=8.3,<10",
@@ -36,6 +40,12 @@ sentinelward = "sentinelward.cli:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/sentinelward"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"migrations" = "sentinelward/migrations"
+"fixtures/contract-examples.json" = "sentinelward/fixtures/contract-examples.json"
+"fixtures/m6-contexts.example.json" = "sentinelward/fixtures/m6-contexts.example.json"
+"fixtures/m6-vitaldb-manifest.example.json" = "sentinelward/fixtures/m6-vitaldb-manifest.example.json"
 
 [tool.pytest.ini_options]
 addopts = "-ra --strict-config --strict-markers"

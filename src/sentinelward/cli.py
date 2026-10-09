@@ -14,17 +14,32 @@ import uvicorn
 from alembic import command
 from alembic.config import Config
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+from telegram import Bot
 
+from sentinelward.adapters.alert_publisher import MqttAlertPublisher, MqttOutboxWorker
 from sentinelward.adapters.backend import BackendEventClient
+from sentinelward.adapters.clinical_backend import ClinicalBackendClient
 from sentinelward.adapters.fake_actions import SimulatedActionPort
 from sentinelward.adapters.mqtt import MqttAdapter
+from sentinelward.adapters.telegram import (
+    TelegramCallbackRouter,
+    TelegramIdentityMap,
+    TelegramNotifier,
+    TelegramPoller,
+)
+from sentinelward.alert_persistence import PostgresAlertStore
+from sentinelward.alerts import AlertCoordinator
 from sentinelward.api import create_app
 from sentinelward.config import Settings
 from sentinelward.contracts import VerdictMessage
 from sentinelward.engine import AutomationEngine
 from sentinelward.health import HealthRegistry
 from sentinelward.logging_config import configure_logging
+from sentinelward.m6_persistence import PostgresM6Handler, config_from_artifact, load_contexts
 from sentinelward.persistence import PostgresStore
+from sentinelward.phase2_actions import Phase2ActionPort
+from sentinelward.ports import ActionPort
+from sentinelward.scheduler import DurableAlertScheduler, register_escalation_target
 from sentinelward.service import MessageService
 
 
@@ -36,7 +51,10 @@ def parser() -> argparse.ArgumentParser:
     database.add_argument("operation", choices=("upgrade", "init-checkpointer"))
     subcommands.add_parser("serve")
     smoke = subcommands.add_parser("smoke-test")
-    smoke.add_argument("--fixture", default="fixtures/contract-examples.json", type=Path)
+    smoke.add_argument("--fixture", type=Path)
+    from sentinelward.m6_cli import add_m6_parser
+
+    add_m6_parser(subcommands)
     return value
 
 
@@ -44,6 +62,16 @@ def main(argv: list[str] | None = None) -> None:
     if sys.platform == "win32":
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     arguments = parser().parse_args(argv)
+    if arguments.command == "m6":
+        from sentinelward.m6_cli import run_m6
+        from sentinelward.presentation import sanitize
+
+        try:
+            run_m6(arguments)
+        except (ValueError, OSError) as exc:
+            print(f"M6 | FAILED | {sanitize(exc)[:130]}", file=sys.stderr)
+            raise SystemExit(2) from None
+        return
     settings = Settings()
     settings.validate_files()
     configure_logging(settings.log_level)
@@ -57,15 +85,21 @@ def main(argv: list[str] | None = None) -> None:
             asyncio.run(init_checkpointer(settings.database_url))
         return
     if arguments.command == "smoke-test":
-        asyncio.run(smoke_test(settings, arguments.fixture))
+        asyncio.run(smoke_test(settings, arguments.fixture or default_smoke_fixture()))
         return
     asyncio.run(serve(settings))
 
 
 def run_migrations(settings: Settings) -> None:
-    root = Path(__file__).resolve().parents[2]
-    configuration = Config(root / "alembic.ini")
-    configuration.set_main_option("script_location", str(root / "migrations"))
+    package_root = Path(__file__).resolve().parent
+    source_root = Path(__file__).resolve().parents[2]
+    packaged_migrations = package_root / "migrations"
+    script_location = (
+        packaged_migrations if packaged_migrations.is_dir() else source_root / "migrations"
+    )
+    source_config = source_root / "alembic.ini"
+    configuration = Config(source_config if source_config.is_file() else None)
+    configuration.set_main_option("script_location", str(script_location))
     sqlalchemy_url = settings.database_url.replace("postgresql://", "postgresql+psycopg://", 1)
     configuration.set_main_option("sqlalchemy.url", sqlalchemy_url)
     command.upgrade(configuration, "head")
@@ -77,6 +111,16 @@ async def init_checkpointer(database_url: str) -> None:
     async with AsyncPostgresSaver.from_conn_string(database_url) as checkpointer:
         await checkpointer.setup()
     print("CHECKPOINTER_INITIALIZED")
+
+
+def default_smoke_fixture() -> Path:
+    package_fixture = Path(__file__).resolve().parent / "fixtures" / "contract-examples.json"
+    if package_fixture.is_file():
+        return package_fixture
+    source_fixture = Path(__file__).resolve().parents[2] / "fixtures" / "contract-examples.json"
+    if source_fixture.is_file():
+        return source_fixture
+    raise FileNotFoundError("packaged smoke-test fixture is unavailable")
 
 
 async def smoke_test(settings: Settings, fixture_path: Path) -> None:
@@ -115,11 +159,78 @@ async def serve(settings: Settings) -> None:
         else None
     )
     health.set("backend", await backend.health() if backend else False)
-    action_port = SimulatedActionPort()
+    simulated_actions = SimulatedActionPort()
     os.environ.setdefault("LANGGRAPH_STRICT_MSGPACK", "true")
     async with AsyncPostgresSaver.from_conn_string(settings.database_url) as checkpointer:
+        alert_coordinator: AlertCoordinator | None = None
+        alert_scheduler: DurableAlertScheduler | None = None
+        telegram_bot: Bot | None = None
+        telegram_poller: TelegramPoller | None = None
+        publisher: MqttAlertPublisher | None = None
+
+        action_port: ActionPort
+        if settings.external_effect_mode == "live":
+            if (
+                settings.backend_base_url is None
+                or settings.backend_service_token is None
+                or settings.telegram_bot_token is None
+                or settings.telegram_recipients_file is None
+            ):
+                raise RuntimeError("live Phase 2 configuration is incomplete")
+            backend_token = settings.backend_service_token.get_secret_value()
+            clinical_backend = ClinicalBackendClient(
+                settings.backend_base_url,
+                backend_token,
+                timeout_seconds=settings.backend_timeout_seconds,
+                max_attempts=settings.backend_max_attempts,
+            )
+            alert_store = PostgresAlertStore(settings.database_url)
+            identities = TelegramIdentityMap.load(settings.telegram_recipients_file)
+            telegram_bot = Bot(settings.telegram_bot_token.get_secret_value())
+            notifier = TelegramNotifier(
+                bot=telegram_bot,
+                identities=identities,
+                store=alert_store,
+            )
+            publisher = MqttAlertPublisher(store)
+            alert_scheduler = DurableAlertScheduler(settings.database_url)
+            alert_coordinator = AlertCoordinator(
+                store=alert_store,
+                publisher=publisher,
+                roster_provider=clinical_backend,
+                notifier=notifier,
+                waveform_provider=clinical_backend,
+                scheduler=alert_scheduler,
+                escalation_seconds=settings.alert_escalation_seconds,
+            )
+            register_escalation_target(alert_coordinator)
+            callback_router = TelegramCallbackRouter(
+                store=alert_store,
+                identities=identities,
+                acknowledge=alert_coordinator.acknowledge,
+                escalate=alert_coordinator.escalate,
+                publish_bedside=publisher.publish_bedside,
+            )
+            telegram_poller = TelegramPoller(telegram_bot, callback_router)
+            action_port = Phase2ActionPort(alert_coordinator, simulated_actions)
+        else:
+            action_port = simulated_actions
+
         engine = AutomationEngine(store=store, action_port=action_port, checkpointer=checkpointer)
-        message_service = MessageService(settings, store, engine, health)
+        message_service = MessageService(
+            settings,
+            store,
+            engine,
+            health,
+            bedside_handler=alert_coordinator,
+            m6_handler=PostgresM6Handler(
+                settings.database_url,
+                load_contexts(settings.m6_contexts_file),
+                config_from_artifact(settings.m6_calibration_file),
+            )
+            if settings.m6_enabled and settings.m6_contexts_file is not None
+            else None,
+        )
         loop = asyncio.get_running_loop()
         mqtt = MqttAdapter(
             host=settings.mqtt_host,
@@ -132,9 +243,29 @@ async def serve(settings: Settings) -> None:
             password=settings.mqtt_password.get_secret_value() if settings.mqtt_password else None,
             tls=settings.mqtt_tls,
             ca_file=settings.mqtt_ca_file,
+            m6_enabled=settings.m6_enabled,
         )
         health.set("mqtt", await mqtt.start())
-        application = create_app(health)
+        poller_task: asyncio.Task[None] | None = None
+        outbox_worker: MqttOutboxWorker | None = None
+        outbox_task: asyncio.Task[None] | None = None
+        if publisher is not None or settings.m6_enabled:
+            outbox_worker = MqttOutboxWorker(store, mqtt, health=health)
+            outbox_task = asyncio.create_task(outbox_worker.run())
+        if alert_scheduler is not None and telegram_bot is not None and telegram_poller is not None:
+            alert_scheduler.start()
+            await telegram_bot.initialize()
+            health.set("telegram", True)
+            poller_task = asyncio.create_task(telegram_poller.run())
+        application = create_app(
+            health,
+            alerts=alert_coordinator,
+            service_token=(
+                settings.backend_service_token.get_secret_value()
+                if settings.backend_service_token
+                else None
+            ),
+        )
         server = uvicorn.Server(
             uvicorn.Config(
                 application,
@@ -149,6 +280,23 @@ async def serve(settings: Settings) -> None:
         try:
             await server.serve()
         finally:
+            if outbox_worker is not None:
+                await outbox_worker.stop()
+            if outbox_task is not None:
+                outbox_task.cancel()
+                with suppress(asyncio.CancelledError):
+                    await outbox_task
+            if telegram_poller is not None:
+                await telegram_poller.stop()
+            if poller_task is not None:
+                poller_task.cancel()
+                with suppress(asyncio.CancelledError):
+                    await poller_task
+            if telegram_bot is not None:
+                await telegram_bot.shutdown()
+                health.set("telegram", False)
+            if alert_scheduler is not None:
+                await alert_scheduler.shutdown()
             monitor.cancel()
             with suppress(asyncio.CancelledError):
                 await monitor

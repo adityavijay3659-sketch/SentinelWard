@@ -20,6 +20,7 @@ def route_verdict(message: VerdictMessage) -> list[ActionRequest]:
             bed_id=message.bed_id,
             device_id=device_id,
             detail=detail,
+            source_verdict=message if agent_id == "A1" else None,
         )
 
     routes: dict[Verdict, list[ActionRequest]] = {

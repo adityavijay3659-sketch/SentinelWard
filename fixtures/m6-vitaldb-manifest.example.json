@@ -1,0 +1,20 @@
+{
+  "patient_id": "replace-with-patient-group-id",
+  "source": "vitaldb",
+  "bed_id": "B01",
+  "context": {
+    "episode_id": "replace-with-replay-episode-id",
+    "device_id": "MON-01",
+    "start_ts": 1792252800000
+  },
+  "duration_s": 1200,
+  "tracks": {
+    "SNUADC/ART": "art.csv.gz",
+    "SNUADC/ECG_II": "ecg.csv.gz",
+    "SNUADC/PLETH": "pleth.csv.gz",
+    "Solar8000/HR": "hr.csv.gz",
+    "Solar8000/NIBP_SBP": "nibp-sbp.csv.gz",
+    "Solar8000/NIBP_DBP": "nibp-dbp.csv.gz",
+    "Solar8000/NIBP_MBP": "nibp-mbp.csv.gz"
+  }
+}

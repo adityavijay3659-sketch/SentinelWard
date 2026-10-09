@@ -69,6 +69,17 @@ class AutomationEngine:
                 continue
             action_id, created = await self._store.reserve_action(request)
             if not created:
+                if request.agent_id == "A1" and request.action == "send_message":
+                    result = await self._action_port.execute(request, action_id=action_id)
+                    await self._store.complete_action(result)
+                    await self._store.append_audit(
+                        correlation_id=request.correlation_id,
+                        event_type=f"action.{result.status}",
+                        actor=request.agent_id,
+                        detail=result.model_dump(mode="json"),
+                    )
+                    results.append(result.model_dump(mode="json"))
+                    continue
                 results.append(
                     {
                         "action_id": action_id,

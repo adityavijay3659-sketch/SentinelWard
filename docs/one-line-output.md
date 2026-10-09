@@ -9,6 +9,52 @@ SentinelWard integrations need two views of the same event:
 
 The JSON is always authoritative. The line is derived from it and must never be used as an input contract.
 
+## Audience views
+
+Every phase (0–7), including future A2–A8 integrations and verification, exposes
+three views of the same validated event:
+
+| Audience | Form | Intended use |
+|---|---|---|
+| Clinical user | short one-line instruction with an uppercase urgency label and no staff IDs | screen and phone comprehension |
+| Team/operator | deterministic one-line status with canonical IDs and correlation facts | logs, debugging and handoff |
+| Model/service | unchanged locked v1 JSON | validation, routing, replay and automation |
+
+For internal alert command responses these are returned as `outputs.user`, `outputs.team` and
+`outputs.model`. The existing `summary` remains an alias of `outputs.team` for compatibility.
+Locked MQTT bodies are unchanged; consumers must not add an output field to `ward/alert` or
+`ward/action`.
+
+Example:
+
+```text
+USER  16:00:03 UTC | B02 | EMERGENCY ALERT | Bed 2 — possible heart emergency. Go now. | RESPOND NOW
+TEAM  16:00:03 UTC | B02 | A1 EMERGENCY STEP 1 | al_0042; to=staff:priya; Bed 2 — possible heart emergency. Go now. | OPEN
+MODEL {"v":1,"type":"alert","alert_id":"al_0042",...}
+```
+
+These lines are fixed-template projections of validated fields. Granite or any other generative
+model must not compose, embellish or infer live emergency wording.
+
+Display input must exclude patient names and secrets at the producer boundary.
+The renderer removes control characters and bounds display length; it does not
+claim to identify every possible personal name in free text. User action output
+uses fixed action labels; operator details remain in team/model views.
+
+An input request does not prove an outcome. Bedside messages say `CHECK REPORTED`;
+the resulting alert state proves closure or continuation. Escalation says
+`ESCALATED`; a separate delivery action proves phone delivery. M6 research scores
+carry `RESEARCH` and their validation status. Potential deterioration carries an
+`URGENT` patient-check label even when drift input is missing. A numeric M6 evidence
+index of zero on such a window is not a normal-patient verdict.
+
+M6 0.3.1 partial assessments explicitly show `M6 GAP-ONLY` in the team view.
+A measured pressure gap below the drift threshold says `WARNING: PRESSURE GAP`
+in the user view, rather than claiming its measured inputs are missing. Full
+machine output distinguishes gap-only from combined baseline assessment and
+retains the pending clinical-validation state. Patient-check urgency always
+takes precedence. See [verified M6 examples](m6-revalidation-2026-10-09.md).
+
 ## Required form
 
 ```text

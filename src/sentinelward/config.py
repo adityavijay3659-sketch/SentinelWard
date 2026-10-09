@@ -33,13 +33,25 @@ class Settings(BaseSettings):
     backend_service_token: SecretStr | None = None
     backend_timeout_seconds: float = Field(default=5.0, gt=0, le=30)
     backend_max_attempts: int = Field(default=3, ge=1, le=5)
-    external_effect_mode: Literal["simulate"] = "simulate"
+    external_effect_mode: Literal["simulate", "live"] = "simulate"
+    m6_enabled: bool = False
+    m6_contexts_file: Path | None = None
+    m6_calibration_file: Path | None = None
+    telegram_bot_token: SecretStr | None = None
+    telegram_recipients_file: Path | None = None
+    alert_demo_seconds: int = Field(default=30, ge=1, le=300)
+    alert_design_real_seconds: int = Field(default=60, ge=1, le=600)
     http_host: str = "127.0.0.1"
     http_port: int = Field(default=8088, ge=1, le=65535)
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
 
     @model_validator(mode="after")
     def validate_security(self) -> Settings:
+        if self.m6_enabled:
+            if self.m6_contexts_file is None:
+                raise ValueError("M6 requires an explicit episode-context file")
+            if self.environment == "design-real":
+                raise ValueError("M6 is research-only until the held-out safety gate is reviewed")
         if self.environment != "test":
             if not self.mqtt_tls:
                 raise ValueError("MQTT TLS is mandatory outside the test profile")
@@ -49,8 +61,31 @@ class Settings(BaseSettings):
                 raise ValueError("MQTT credentials are mandatory outside test")
             if self.backend_base_url and self.backend_service_token is None:
                 raise ValueError("backend token is required when backend URL is configured")
+        if self.external_effect_mode == "live":
+            if not self.backend_base_url or self.backend_service_token is None:
+                raise ValueError("live effects require the authenticated backend")
+            if self.telegram_bot_token is None or self.telegram_recipients_file is None:
+                raise ValueError("live effects require Telegram token and recipient map")
         return self
 
     def validate_files(self) -> None:
+        if self.m6_enabled:
+            for path in (self.m6_contexts_file, self.m6_calibration_file):
+                if path is not None and not path.is_file():
+                    raise ConfigurationError(f"M6 input file does not exist: {path}")
         if self.mqtt_tls and self.mqtt_ca_file is not None and not self.mqtt_ca_file.is_file():
             raise ConfigurationError(f"MQTT CA file does not exist: {self.mqtt_ca_file}")
+        if (
+            self.external_effect_mode == "live"
+            and self.telegram_recipients_file is not None
+            and not self.telegram_recipients_file.is_file()
+        ):
+            raise ConfigurationError(
+                f"Telegram recipient map does not exist: {self.telegram_recipients_file}"
+            )
+
+    @property
+    def alert_escalation_seconds(self) -> int:
+        if self.environment == "design-real":
+            return self.alert_design_real_seconds
+        return self.alert_demo_seconds

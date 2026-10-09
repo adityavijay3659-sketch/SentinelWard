@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
+from pydantic import BaseModel, ConfigDict, Field, FiniteFloat, StringConstraints, model_validator
 
 from sentinelward.errors import ContractError
 
@@ -17,11 +17,58 @@ StaffId = Annotated[str, StringConstraints(pattern=r"^staff:[a-z][a-z0-9_-]{0,31
 Identifier = Annotated[str, StringConstraints(min_length=1, max_length=96)]
 Reason = Annotated[str, StringConstraints(min_length=1, max_length=120)]
 Probability = Annotated[float, Field(ge=0.0, le=1.0)]
-TimestampMs = Annotated[int, Field(ge=0)]
+TimestampMs = Annotated[int, Field(ge=0, le=253_402_300_799_999)]
 
 
 class StrictMessage(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
+
+
+class CuffReading(StrictMessage):
+    sys: FiniteFloat
+    dia: FiniteFloat
+    map: FiniteFloat
+    ts: TimestampMs
+
+    @model_validator(mode="after")
+    def ordered(self) -> CuffReading:
+        if not 0 < self.dia <= self.map <= self.sys <= 350:
+            raise ValueError("cuff pressures must satisfy 0 < dia <= map <= sys <= 350")
+        return self
+
+
+class MonitorAlarm(StrictMessage):
+    code: Annotated[str, StringConstraints(min_length=1, max_length=64)]
+    priority: Literal["low", "medium", "high"]
+
+
+Waveform = Annotated[list[FiniteFloat], Field(min_length=125, max_length=125)]
+
+
+class VitalsMessage(StrictMessage):
+    v: Literal[1]
+    type: Literal["vitals"]
+    bed_id: BedId
+    device_id: DeviceId
+    seq: Annotated[int, Field(ge=0)]
+    ts: TimestampMs
+    fs: Literal[125]
+    ecg: Waveform | None
+    ppg: Waveform | None
+    abp: Waveform | None
+    hr: FiniteFloat | None
+    spo2: FiniteFloat | None
+    rr: FiniteFloat | None
+    nibp: CuffReading | None
+    monitor_alarm: MonitorAlarm | None
+
+    @model_validator(mode="after")
+    def causal(self) -> VitalsMessage:
+        if self.ts % 1000:
+            raise ValueError("vitals ts must identify the start of a whole one-second frame")
+        if self.nibp is not None and self.nibp.ts > self.ts:
+            raise ValueError("cuff reading cannot come from the future")
+        return self
 
 
 class Verdict(StrEnum):
@@ -83,6 +130,14 @@ class ScoreMessage(StrictMessage):
     reason: Reason
     extra: dict[str, Any] = Field(default_factory=dict)
 
+    @model_validator(mode="after")
+    def finite_json_metadata(self) -> ScoreMessage:
+        try:
+            json.dumps(self.extra, allow_nan=False)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("score metadata must contain finite JSON values") from exc
+        return self
+
 
 class ActionMessage(StrictMessage):
     v: Literal[1]
@@ -109,8 +164,8 @@ class AlertMessage(StrictMessage):
     verdict: Verdict
     priority: Literal["low", "medium", "high"]
     text: Annotated[str, StringConstraints(min_length=1, max_length=240)]
-    to: Annotated[list[StaffId], Field(min_length=1)]
-    ladder_step: Annotated[int, Field(ge=1, le=4)]
+    to: list[StaffId]
+    ladder_step: Annotated[int, Field(ge=1, le=3)]
     status: Literal["open", "escalated", "acknowledged", "failed"]
     acked_by: StaffId | None = None
     acked_ts: TimestampMs | None = None
@@ -121,7 +176,7 @@ class BedsideCheckMessage(StrictMessage):
     type: Literal["bedside_check"]
     bed_id: BedId
     ts: TimestampMs
-    result: Literal["patient_ok", "emergency_confirmed", "sensor_refitted", "unsure"]
+    result: Literal["patient_ok", "patient_not_ok"]
     by: StaffId
 
 
@@ -152,6 +207,7 @@ class ActionRequest(StrictMessage):
     detail: Annotated[str, StringConstraints(max_length=240)] = ""
     requested_by_role: Annotated[str, StringConstraints(min_length=1, max_length=32)] = "system"
     approved_by: StaffId | None = None
+    source_verdict: VerdictMessage | None = None
 
     @property
     def idempotency_key(self) -> str:
@@ -168,7 +224,12 @@ class ActionResult(StrictMessage):
 
 
 type WireMessage = (
-    VerdictMessage | ScoreMessage | ActionMessage | AlertMessage | BedsideCheckMessage
+    VerdictMessage
+    | ScoreMessage
+    | ActionMessage
+    | AlertMessage
+    | BedsideCheckMessage
+    | VitalsMessage
 )
 
 BED_TOPIC = re.compile(
@@ -200,10 +261,12 @@ def parse_wire_message(topic: str, payload: bytes, *, max_bytes: int = 65_536) -
         if match is None:
             raise ContractError("UNKNOWN_TOPIC", topic)
         kind = match.group("kind")
-        expected_type = {"verdict": "verdict", "bedside": "bedside_check"}.get(kind, "score")
+        expected_type = {"verdict": "verdict", "bedside": "bedside_check", "vitals": "vitals"}.get(
+            kind, "score"
+        )
         if kind == "vitals":
-            raise ContractError("UNSUPPORTED_IN_PHASE1", "vitals are reserved for M6")
-        if kind == "verdict":
+            model = VitalsMessage
+        elif kind == "verdict":
             model = VerdictMessage
         elif kind == "bedside":
             model = BedsideCheckMessage
@@ -229,6 +292,8 @@ def parse_wire_message(topic: str, payload: bytes, *, max_bytes: int = 65_536) -
 
 
 def correlation_id_for(message: WireMessage) -> str:
+    if isinstance(message, VitalsMessage):
+        return f"{message.bed_id}:{message.device_id}:{message.ts}:{message.seq}:vitals"
     if isinstance(message, VerdictMessage):
         return f"{message.bed_id}:{message.window_start}:{message.verdict.value}"
     if isinstance(message, ScoreMessage):

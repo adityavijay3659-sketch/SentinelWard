@@ -1,0 +1,761 @@
+SENTINELWARD — MASTER CONTINUATION PROMPT AND VERIFIED CHAT HANDOFF
+Snapshot: 9 October 2026. User: Aditya. Local timezone: Asia/Calcutta.
+
+PUBLICATION NOTE: This file preserves the pre-publication context snapshot.
+The Phase 2/3 source, tests, migrations and documentation are published with
+this file on phase/2-a1-alerts, without a merge into main. The Git commit/status
+details below describe the original C: workspace before publication; verify the
+current checkout and remote rather than reusing those details as current state.
+No publication makes pending integration or clinical-readiness gates pass.
+
+This is a reconstructed continuation handoff from the available conversation,
+local documentation, source and saved evidence. It is not a verbatim chat export.
+
+START OF PROMPT
+
+You are continuing my existing SentinelWard project. Read this handoff fully,
+then inspect the actual workspace and current source documents before proposing
+or implementing further work. Do not restart the project from scratch. Treat
+this as a dated handoff, not a substitute for checking current files. Report any
+disagreement between these notes, the repository and newly updated Drive docs.
+
+1. PRIMARY PROJECT SOURCES
+
+Google Drive:
+https://drive.google.com/drive/folders/12SDtIMOuB3DopNXyaQOAbahT-YTlN0kJ
+
+Project website:
+https://sentinelward-inside.vercel.app/#/ring
+
+Configured GitHub remote:
+https://github.com/adityavijay3659-sketch/SentinelWard.git
+
+Workspace:
+C:\Users\Aditya\SentinelWard
+
+The project documents previously used were locked team Doc 00 v1, Aditya's
+automation document v3 and R10. Refresh the Drive/website sources and identify
+relevant updates. These links were not reread while assembling this handoff.
+If a source is inaccessible, say so; never imply that you read it. Use the
+available Drive skill/connector when appropriate. Do not modify Drive documents
+or share files externally merely because you are reading them.
+
+Local locked contracts and the implemented source remain important evidence.
+Do not silently rename v1 fields/topics or implement a breaking change because
+an informal description uses different wording. Explain conflicts and request
+the needed contract decision.
+
+2. WHAT THE PROJECT IS AND WHAT I OWN
+
+SentinelWard is Team TessNova's IBM Z Datathon 2026 project. It coordinates
+evidence and responses around possible patient emergencies, drifting/faulty
+sensors, tampered monitor data and network/device attacks. It is not a certified
+clinical system, treatment controller or autonomous diagnostic service.
+
+I am Aditya, responsible for automation, agents and model M6. Do not confuse me
+with Aditya Singh or Aditya Singhal. Do not train or modify teammates' models
+as part of my M6 work unless I separately authorize that scope.
+
+Ownership:
+- Aditya: LangGraph workflow hosting, policy, persistence, audit/undo coordination;
+  A1 with Antra; A5/A6/A7/A8; local Granite writer/fallback; M6 drift watcher.
+- Aditya Singh: simulator, broker/platform/backend, shared database and deployment
+  interfaces. Supplies TLS/ACLs, backend endpoints, inventory/roster and access.
+- Aditya Singhal: final decision/model layer, verdict fixtures/window semantics,
+  M6 review and decision-layer handoff. Do not assume he is a qualified clinician
+  merely because he reviews the model; clinical adjudication needs suitable reviewers.
+- Kartik: cybersecurity, A2 containment, A3 evidence, A4 fleet hunt, adversarial
+  fixtures and relevant M5 evidence. I host typed integration boundaries.
+- Antra: screen/messaging presentation and A1 integration. Some historical docs
+  spell the name Antara; verify preferred spelling without changing wire IDs.
+- A9 playbook learning remains design-only, not a datathon runtime feature.
+
+3. NON-NEGOTIABLE SAFETY AND WORKING RULES
+
+- The central screen is PRIMARY. Telegram/phone is SECONDARY/BACKUP.
+- Never hide a patient or cancel an emergency because tampering is suspected.
+- BOTH preserves the clinical alert path independently of security containment.
+- No treatment, medication, pump, ventilator or monitor-control commands.
+- Official incident reports are drafts; a person reviews and sends them.
+- Granite/LLMs cannot choose live verdicts, actions or emergency wording.
+- Missing evidence is unknown/insufficient, never fabricated normal data.
+- Actions require policy permission and authenticated identity where applicable.
+- Every material action and failure is audited; retries are idempotent.
+- Undo is a new linked action, not deletion/rewriting of history.
+- Never put credentials, patient-identifying information, raw patient waveforms
+  or model binaries into Git or ordinary logs.
+- Do not weaken TLS/authentication or clinical guards just to improve pass counts.
+- Preserve all existing dirty/untracked work. Do not reset/clean/checkout it away.
+- Do not commit, push, open a PR or deploy until I explicitly ask for that action.
+- For clinical labels/configuration, request protected local paths, not patient
+  information or tokens pasted into chat.
+- Scope changes requiring new hospital coordination, clinical collection,
+  contract changes or external authority must be stated and approved.
+
+4. FRAMEWORK, PLATFORM AND PACKAGE STATE
+
+LangGraph for Python is the chosen workflow framework. Zapier is not used or
+required. This is a project-specific choice, not a claim that Zapier is universally
+inferior. APScheduler is the durable timer component, not another agent framework.
+
+Current package: sentinelward 0.3.1.
+Current M6 scorer version: m6-research-0.3.1.
+Runtime: Python 3.12; verification used 3.12.14, Windows x86-64.
+Core: LangGraph 1.2.14, checkpoint-postgres 3.1.2, Psycopg 3.3.6, Paho MQTT 2.1.0,
+APScheduler 3.11.3, python-telegram-bot 22.8, Pydantic, HTTPX, FastAPI/Uvicorn,
+SQLAlchemy, Alembic. Use uv.lock for all exact dependency versions.
+Optional offline research extra: scikit-learn==1.9.1.
+Training environment also had numpy 2.5.3 and scipy 1.18.1.
+Core serving and exported forest JSON inference do not require scikit-learn.
+Use the declared s390x dependency path and verify LinuxONE rather than assuming
+Windows package success establishes that platform's compatibility.
+Docker is not required and was unavailable on PATH.
+
+Local resources:
+- Development venv: D:\SentinelWard-Phase2-Venv
+- uv executable: C:\Users\Aditya\.local\bin\uv.exe
+- Cache/TEMP/TMP preference: D:\SentinelWard-Phase2-Cache
+- Data root: D:\SentinelWard-Data\VitalDB
+- PostgreSQL lab: D:\SentinelWard-Phase0-Lab
+- pg_ctl: D:\SentinelWard-Phase0-Lab\postgres-embedded\runtime\bin\pg_ctl.exe
+- pgdata: D:\SentinelWard-Phase0-Lab\pgdata
+- Local verification server used loopback port 55432, PostgreSQL 17.10.
+- PostgreSQL was restored to STOPPED after checks. Do not expect the deleted
+  disposable databases or a running server to remain available.
+
+Disk warning: while assembling this handoff, C: reported 0 free bytes and D:
+approximately 102.9 GB free. Recheck this before work. Keep bulk downloads,
+virtualenvs, build outputs and caches on D:. Do not delete user files to free
+space. Propose a scoped recovery/move if repository writes on C: are blocked.
+The historical local-environment.md describes an older global Python; do not
+replace the verified Python 3.12 environment with global Python 3.14.
+
+5. GIT STATE — IMPORTANT FOR NOT LOSING THE IMPLEMENTATION
+
+At handoff, current branch is phase/2-a1-alerts.
+HEAD: 81bc5f0832a17efbf7fb6bad05d40c609c189c17
+Commit subject: feat: implement Phase 1 automation foundation.
+Earlier local commits: 5a23ca9 (Phase 0 output compatibility), 29a74d6 (Phase 0 prep).
+Observed local remote-tracking refs:
+  origin/main -> 29a74d6
+  origin/phase/1-foundation -> 81bc5f0
+These are LOCAL cached refs, not a fresh verification of GitHub's current state.
+
+Phase 0/1 were committed and earlier pushes were explicitly requested. Current
+Phase 2/3 implementation, M6 research modules/tests and newer docs contain many
+modified/untracked files; they have NOT been newly committed/pushed in this work.
+The current branch name does not imply that only Phase 2 exists.
+
+IMPORTANT: cloning GitHub alone may omit the latest code. Preserve/inspect the
+entire existing working folder AND D: research artifacts. Do not switch branches
+or overwrite files before understanding this dirty worktree. Do not stage all
+changes indiscriminately. No push authorization is implied by this handoff.
+
+6. GLOBAL OUTPUT REQUIREMENTS — APPLY TO ALL PHASES
+
+I want short, clean, precise, natural wording backed by observed facts. No
+verbose data dumps for people, no fabricated certainty and no generative
+summaries of live emergencies.
+
+Human/user view:
+- One physical line, at most 160 characters.
+- Preserve bed/subject, urgency, meaningful fact and outcome/next step.
+- Explicit URGENT, EMERGENCY or WARNING when evidence supports it.
+- No staff identifiers or patient-identifying details where inappropriate.
+
+Team/operator view:
+- One physical line, at most 160 characters.
+- Canonical model/agent/event identity, status and useful correlation facts.
+- Clear limitations, failures, delivery state and research status.
+
+Model/service view:
+- Complete, typed, versioned locked v1 JSON, not truncated display text.
+- No consumer parses a human line back into a machine decision.
+- Missing values remain null; false/zero must not stand in for missing evidence.
+- Evidence-index scores are NOT clinical probabilities.
+
+Format: HH:MM:SS UTC | SUBJECT | SOURCE EVENT | KEY FACT | RESULT_OR_NEXT.
+Sanitize tabs/newlines and unsafe display controls. Shorten explanatory text
+before dropping urgency, identity or outcome. Canonical JSON remains authoritative.
+Do not infer delivery, closure, recovery or acknowledgement from a request alone.
+
+Internal alert responses expose outputs.user, outputs.team and outputs.model;
+legacy summary aliases the team view. Do not add these fields to locked MQTT
+messages merely for display compatibility.
+
+Verified generated-input examples, not live patient messages:
+USER: 00:00:00 UTC | B01 | WARNING: POSSIBLE DRIFT | ART and cuff disagree; combined assessment unavailable; review patient and sensor | RESEARCH; STAFF REVIEW
+TEAM: 00:00:00 UTC | B01 | M6 GAP-ONLY DRIFT 0.75 | ART and cuff disagree; combined assessment unavailable; review patient and sensor | RESEARCH ONLY
+URGENT USER: 00:00:00 UTC | B01 | URGENT: PATIENT CHECK | Low cuff pressure observed; immediate patient review needed | RESEARCH; STAFF REVIEW
+The identifying USER/TEAM prefixes here are not part of renderer content. Zero
+replay timestamps are case-relative, not actual live patient dates.
+
+7. CONTRACT AND NAMING RULES
+
+Locked contract: Doc 00 v1. v is integer 1. Live timestamps are UTC epoch ms.
+Beds B01-B12; devices MON-01-MON-12; models M1-M6; agents A1-A9; staff:<name>.
+Canonical verdicts only:
+NORMAL, EMERGENCY, BOTH, TAMPERING, UNSURE, DRIFTING, LOOSE_SENSOR, DEVICE_ATTACK.
+UNTRUSTED is a display/data-trust state, NOT a verdict enum.
+Score reasons are at most 120 characters. A verdict has at most three reasons.
+AlertMessage.ladder_step is 1..3, NOT 1..4.
+Bedside results are patient_ok | patient_not_ok, NOT informal alternatives.
+
+Consumed topics:
+- ward/bed/<bed_id>/verdict
+- ward/bed/<bed_id>/bedside
+- ward/bed/<bed_id>/vitals
+- ward/bed/<bed_id>/score/M3
+- ward/bed/<bed_id>/score/M5
+
+Produced topics:
+- ward/action
+- ward/alert
+- ward/bed/<bed_id>/score/M6
+
+Vitals QoS 0; other workflow messages QoS 1. Verdicts retained; alert/action/M6
+score events non-retained. Publish ward/alert on each alert-state change and
+A1 delivery/edit/escalation/acknowledgement outcomes through ward/action.
+MQTT QoS 1 is not a network exactly-once guarantee; consumers must deduplicate.
+
+Verdict identity: bed_id:window_start:verdict.
+Action identity: correlation_id:agent_id:action:target_id.
+M6 outbox identity also includes opaque episode ID, bed, window and scorer version.
+Internal agent-event endpoint /internal/v1/agent-events exists behind a typed
+authenticated adapter, but the live team endpoint/approval is still pending.
+Read contracts.py and fixtures rather than retyping guessed JSON schemas.
+
+8. PHASE 0 — WHAT WAS DONE
+
+Architecture, canonical naming/contracts, responsibilities, agent permissions,
+handoffs, failure/security policy, M6 plan and one-line compatibility were prepared.
+Phase 0 fixtures and output examples were validated. Independent local feasibility
+toys outside the repository checked LangGraph PostgreSQL restart/resume,
+APScheduler persistence, Telegram callbacks/edit behavior offline, local Granite
+3.3 2B via llama.cpp, VitalDB discovery and toy Page-Hinkley drift detection.
+Historical VitalDB discovery found 3,024 ART/NIBP-matching cases; this did not mean
+all cases were sufficient for the eventual stricter M6 pipeline.
+
+Locally executable preparation was verified. Team confirmations, live credentials,
+LinuxONE access and whole-team paper walkthrough remain external gates.
+Do not call all of Phase 0 officially signed off just because its local work exists.
+An old pre-17-October no-code plan appears in historical docs; later explicit
+requests authorized Phase 1 onward implementation. Do not blindly treat that old
+planning note as the current request or erase the subsequent implementation.
+
+9. PHASE 1 — WHAT WAS IMPLEMENTED
+
+Python modular monolith, package/CLI, uv lock, systemd deployment files and CI.
+Strict Pydantic topic/payload validation; payload limits and finite-value checks.
+Deterministic LangGraph router and deny-by-default agent policy.
+PostgreSQL ingress/inbox deduplication, dead letters, action reservations,
+append-only application audit, outbox and graph checkpoints.
+MQTT 3.1.1/TLS, reconnect/backoff, durable acceptance/rejection before manual ACK.
+Accepted-but-unprocessed messages resume rather than being dropped as duplicates.
+Authenticated backend adapter with idempotency, bounded retries/timeouts.
+Safe simulated action port; health/liveness/readiness/metrics and JSON logs.
+Unit/contract/security/restart and real local PostgreSQL verification.
+
+Routing foundation includes NORMAL no action; EMERGENCY A1; BOTH independent
+A1/A2 paths; TAMPERING hand-check/evidence and policy-dependent containment;
+UNSURE hand-check; DRIFTING A1/A6; repeated LOOSE_SENSOR eligible for A6;
+DEVICE_ATTACK IT/security without a nurse-facing clinical alarm solely from the
+network event. Some registered actions remain simulated until later handlers exist.
+
+Phase 1 is locally implemented; LinuxONE/live broker/backend and team acceptance
+are NOT complete. Foundation schemas or fake actions do not prove later agents
+are operationally implemented.
+
+10. PHASE 2 — A1 ALERTS IMPLEMENTED LOCALLY
+
+Screen alert is persisted/published before attempting Telegram backup.
+One stable active alert_id per bed event. Repeated verdicts update the same alert;
+higher priority upgrades it; lower priority cannot silently downgrade it.
+High priority starts the ladder immediately:
+1) Assigned nurse immediately.
+2) Next nurse after 30 seconds in demo / 60 seconds in design-real.
+3) All unit nurses and on-call doctor after another 30/60 seconds.
+Recipients are cumulative in AlertMessage.to; Telegram sends only to newly added
+recipients. Medium/low alerts notify the assigned nurse without a timed high ladder.
+
+Lifecycle requirements already implemented and tested:
+- On my way acknowledges, cancels all remaining timers, records response time
+  and edits delivered Telegram copies.
+- Manual Escalate advances exactly one step and schedules the following step
+  from that moment; cannot exceed step 3.
+- Patient OK records the bedside result and closes the active event/ladder.
+- Patient NOT OK creates/upgrades high alert, does NOT acknowledge it; ladder
+  continues until a separate acknowledgement or legitimate terminal action.
+- NORMAL cannot cancel an unacknowledged alert. Acknowledgement followed by
+  NORMAL closes the boundary so a future event can create a new alert.
+- Repeated/stale callbacks cannot repeat actions; completed duplicates return
+  stored results. Unknown/unauthorized callbacks cannot mutate state.
+- Telegram failure is an action/delivery failure, not failure/closure of the
+  clinical alert. Screen stays active.
+- Missing waveform falls back to text/buttons. Missing roster is explicit;
+  cached assignments are usable only within their validity.
+
+Persistence includes alert/delivery/roster/callback-token/callback-receipt state,
+PostgreSQL-backed APScheduler jobs, and durable screen/action/bedside outbox.
+Opaque callback tokens; authenticated staff identity comes from protected mapping.
+Per-chat Telegram limiting and bounded RetryAfter handling exist.
+Deployment supports one Uvicorn worker and one scheduler leader; do not claim
+multi-worker production safety without additional work and verification.
+
+Backend interfaces to agree/test live:
+- GET /internal/v1/ward/assignments/{bed_id}
+- GET /internal/v1/beds/{bed_id}/waveform-snapshot?end_ts=&seconds=12
+- POST /internal/v1/alerts/{alert_id}/ack
+- POST /internal/v1/alerts/{alert_id}/escalate
+Bearer authentication and command event_id/idempotency are required.
+The teammate backend must consume ward/alert, idempotently upsert alert state
+and deliver updates to the primary screen. Publishing locally does not prove
+that this external consumer or screen-delivery path works.
+
+Phase 2 is implemented locally, NOT officially accepted. Real phone/screen,
+credentials, live callbacks and restart-before-escalation gate remain pending.
+
+11. PHASE 3 — M6 RUNTIME IMPLEMENTATION
+
+M6 watches whether arterial pressure is gradually becoming inaccurate while
+values still look plausible. It emits evidence to the decision layer; it cannot
+diagnose, issue final clinical verdicts, acknowledge alerts or control devices.
+
+Implemented modules include:
+- m6.py: causal deterministic scorer and bounded per-episode state.
+- m6_persistence.py: per-bed advisory lock, state/outbox atomic transaction,
+  duplicate/restart safety and episode/version boundaries.
+- m6_replay.py: VitalDB CSV/gzip and locked-v1 JSONL replay, compact waveform
+  clocks, resampling/alignment and explicit gaps.
+- m6_evaluation.py / m6_cli.py: patient-separated reviewed-label calibration
+  and frozen held-out evaluation; artifact integrity and held-out-use ledger.
+- m6_demo.py: synthetic software scenarios, not clinical truth.
+- m6_realdata.py: bounded public download, receipts/checksums and original experiments.
+- m6_training.py: offline physiology ridge training/comparison.
+- m6_cohort.py: new independent cohort reference-availability screening.
+- m6_forest.py: optional offline forest training, bounded numeric JSON weights
+  and standard-library inference; no executable pickle loading.
+- m6_revalidation.py: full-window replay, fixed-onset controlled perturbations,
+  model selection/freeze, explicit missing coverage and pre-freeze-only resume.
+- m6_research_audit.py: hashes, patient-cluster uncertainty and paired additional
+  injection responses; no retraining/threshold tuning.
+
+Runtime uses 125 Hz, causal 10-second windows every five seconds. Features:
+arterial MAP, amplitude/shape, HR, simple ECG-to-PPG timing proxy; current timing
+proxy is not a clinically validated PAT measurement.
+Original combined path: fresh-cuff gap, robust within-patient 179-window baseline,
+two-sided Page-Hinkley residual change and morphology/damping evidence.
+Aligned optional M3/M5 hints can inform cause; missing/misaligned evidence means
+uncertain, not an inferred attack. A score alone cannot prove intent.
+
+Research guards currently include cuff age <=120 seconds, 10 mmHg gap signal,
+pressure floor 65 mmHg, substantial pressure fall 15 mmHg and evidence threshold
+0.6. These are CONFIGURED RESEARCH SETTINGS, not approved clinical standards.
+
+Version 0.3.1 cold-start fix:
+- Valid ART plus a fresh cuff disagreement can produce cuff_gap_only evidence
+  before a full baseline or when HR/timing is unavailable.
+- A generated 100/85 mmHg fixture gives score 0.75 and research drift.
+- A generated 11 mmHg gap gives 0.55, below threshold, with insufficient_data
+  and WARNING: PRESSURE GAP instead of falsely saying all measured data is absent.
+- This path does not fabricate predicted MAP, Page-Hinkley or full-baseline readiness.
+- Disagreeing windows never enter baseline training.
+- High alarms, low cuff/ART pressure and substantial falls retain patient-review
+  priority BEFORE gap-only drift evidence.
+- baseline_ready, baseline_required_windows, assessment_path, actual feature/gap
+  evidence and clinical_validation=pending are explicit.
+
+Baseline requires 179 eligible 10-second windows at a five-second hop: about
+15 minutes if uninterrupted. The current implementation can collect eligible
+windows over longer elapsed time; do not falsely say it enforces 15 consecutive
+minutes. Baseline eligibility rejects missing inputs, stale cuff, disagreement
+and potential-deterioration conditions. These rules may be too restrictive for
+available recordings and need evaluation, not silent relaxation.
+
+Episode context is outside the locked wire: opaque episode ID, device and start.
+Old model-version state/calibration cannot silently be reused after upgrading.
+A reviewed new episode requires a new ID and start later than the old last frame.
+Sequence reset/device/patient changes require reconciliation. Do not delete old
+clinical state or pretend resetting an episode proves clinical readiness.
+M6 defaults to disabled; test/demo research can enable it with context. The
+design-real configuration rejects unreviewed research M6.
+
+12. ORIGINAL REAL-DATA EXPERIMENT — RETAIN THE FAILURES
+
+First cohort: 12 distinct VitalDB subjects, first 3,600 seconds, eight required
+tracks each, plus metadata. 98 receipts / 658,585,293 bytes verified.
+All 12 cases ran. 8,628 reference score windows were produced, but 0/12 reached
+179 baseline windows. Old injection runner waited for baseline completion, so
+controlled drift was unevaluated. This was not zero cases executed or 0% accuracy.
+
+Among 5,978 usable feature/target windows, 5,454 (91.2%) lacked fresh cuff evidence;
+other gates included pressure disagreement and deterioration guards.
+Old offline ridge split: 4 train / 4 validation / 4 test subjects; 2,045 / 1,622 /
+2,311 windows. Ridge 100 selected. Held-out MAE 9.0544 mmHg, RMSE 11.7676 and
+bias +4.9958. Constant comparator MAE 11.082; direct waveform MAP MAE 4.3597.
+That regression was offline research, not deployed runtime calibration.
+Some earlier user wording said 9.02; verified artifact was approximately 9.05.
+Failed parser/experiment attempts and original reports were preserved, not overwritten.
+
+13. LATEST REVALIDATION — EXACT FACTS AND LIMITATIONS
+
+New cohort: 12 NEW subjects, first 7,200 seconds, no overlap with prior 12.
+Screened 177 subjects; selection was based on reference availability, not model
+error or clinical/drift outcomes. Screening requires >=200 FIVE-SECOND WINDOWS
+after 900 seconds with changed cuff evidence aged <=120 seconds plus recent
+arterial numeric data. It does NOT mean 200 separate cuff acquisitions. The
+original plan's descriptive wording was wrong; its executed numeric rule was
+unchanged. Historical plan preserved, correction documented.
+
+Changed cuff tuples are a conservative replay proxy, not verified acquisition
+timestamps; identical genuine repeat measurements can be undercounted. Selecting
+cases by numeric-track availability did not guarantee usable waveform channels.
+
+New split: 4 train / 4 validation / 4 held-out patients. Old 12 subjects, including
+old test, were explicitly retired to development. Training therefore used 16
+subjects / 10,408 windows. Validation usable targets: 3/4 subjects / 3,084 windows.
+One validation subject had unusable arterial waveform and zero target windows.
+It was NOT replaced or passed: a recorded pre-test resume amendment retained the
+subject, reported incomplete validation coverage and used available validation.
+Test usable targets: 4/4 new patients / 4,089 windows.
+
+Declared candidates: ridge 0.1/1/10/100 and 64-tree forests with depth/leaf 6/20,
+10/20 and 10/50. Patient-weighted forest training, seed 20261009. Validation
+patient-macro MAE selected forest-10-50: 10.0896 mmHg validation macro MAE.
+Selected weights frozen/hashed BEFORE new held-out waveform evaluation.
+Target: observed Solar8000/ART_MBP monitor MAP, NOT independently adjudicated
+true blood pressure. Features: HR, timing proxy and arterial pulse amplitude.
+Current arterial MAP is not a predictor input, but arterial amplitude still
+comes from the signal being checked: this predictor is not a wholly independent
+reference. It has NOT replaced the runtime within-episode baseline scorer.
+
+Latest same-window held-out comparison:
+- Selected forest MAE 8.5539 mmHg; old frozen ridge 10.0994 mmHg.
+- New RMSE 11.8293; old 13.1159.
+- New bias -0.0686; old -2.0347.
+- Paired MAE reduction 1.5455 mmHg, about 15.3%.
+- Earlier 9.0544 came from a DIFFERENT cohort, not the valid paired comparison.
+- Three patients improved; one worsened from MAE 9.1894 to 11.7151.
+- Patient-macro improvement 1.7922 mmHg; patient-bootstrap 95% interval
+  -1.0557 to 3.9398, using 2,000 draws / seed 20261009. Interval includes zero.
+- Direct waveform MAP comparator MAE 5.4946, better than forest but derived
+  from the signal under investigation; not independent true pressure.
+
+Additional read-only analysis of saved predictions, not a new training run:
+- Mean absolute percentage error 11.0705%.
+- Within +/-5 mmHg: 1,418/4,089 = 34.68%.
+- Within +/-10 mmHg: 2,895/4,089 = 70.80%.
+- Within +/-15 mmHg: 3,634/4,089 = 88.87%.
+- Median absolute error 6.9884 mmHg; empirical p95 absolute error 22.8556 mmHg.
+These tolerance rates are NOT clinical drift-classification accuracy. Neither
+100-MAPE nor a 0.75 evidence index is a valid claim of accuracy/probability.
+
+All 12 new cases completed; 17,268 original-reference windows assessed.
+Actual recorded routing reasons:
+- Fresh cuff unavailable: 5,006 windows.
+- Waveform missing/incomplete/unusable: 3,542.
+- Possible deterioration guard: 6,027.
+- Low cuff guard: 1,660.
+- HR/timing unavailable: 72.
+- Baseline collection: 547.
+- Gap-only assessment: 414 (354 labelled drift, 60 below threshold).
+These are routing reasons, not clinician-confirmed events. Other unavailable
+conditions can coexist but an earlier safety branch takes precedence.
+The earlier 91.2% freshness statistic had a different cohort/denominator.
+
+Baseline windows, in train/validation/test order:
+train 111/14/89/70; validation 76/43/6/0; test 89/48/0/1, versus 179 required.
+Full combined-baseline readiness STILL 0/12. Each patient obtained at most 111
+eligible windows. Connecting teammates alone will not automatically resolve it.
+
+14. CONTROLLED DRIFT EVALUATION — NOT CLINICAL ACCURACY
+
+Fixed perturbation onset: 900 seconds, independent of baseline completion.
+Threshold stayed 0.6; not tuned on unreviewed recordings. Every window, including
+abstention and emergency-compatible routing, was saved.
+Each held-out variant: 5,036 post-onset windows from 4 subjects.
+Additional predictions are counted only when the paired original window was
+NOT already drift-positive; existing predictions cannot be credited to injection.
+
+Variant                  Additional windows   Subjects   Sufficient-input windows
++15 mmHg offset          102                  4/4        169/5,036 (3.36%)
+-15 mmHg offset           36                  3/4         88/5,036 (1.75%)
+5-minute +15 ramp         99                  3/4        170/5,036 (3.38%)
+30-minute +15 ramp        39                  3/4        132/5,036 (2.62%)
+Amplitude to 40%           5                  1/4        104/5,036 (2.07%)
+
++15 offset first additional-prediction delays: 15,165,665,1,305 seconds.
+Original recordings already had 87 drift predictions; truth is unreviewed, so
+do not call these confirmed drift or false positives.
+Coupled synthetic low-pressure control: 0/5,036 drift predictions, 4,843 urgent
+windows and 193 unavailable-input windows. This is NOT a genuine hypotension
+safety set and does not establish clinical false-positive safety.
+The earlier amplitude test is attenuation, not a validated physical damping
+simulation. Real damping/zeroing/level faults require better fixtures/evidence.
+Per-case scorer-call p95 0.203-9.458 ms across seven variants; excludes CSV load,
+database, broker and network latency. Not a ward throughput/load result.
+
+15. SOFTWARE VERIFICATION AND LIVE CONNECTIVITY
+
+Latest full suite: 123 passed, 0 failed, 0 skipped, 42.15 seconds.
+PostgreSQL integration and local VitalDB integration were enabled for that run.
+Ruff clean; formatting 95 files; mypy clean across 40 source modules.
+Tracked diff whitespace clean. Optional training tests ran, not skipped, because
+research dependencies were installed.
+
+Fresh installed wheel 0.3.1 outside checkout:
+- Locked core dependency installation/check: 60 packages compatible.
+- All 40 installed source-module hashes matched the current checkout.
+- Migrations 0001/0002/0003, checkpointer initialization and duplicate workflow
+  smoke passed.
+- Cold-gap, below-threshold-gap and urgent outputs passed <=160-character checks.
+- 100 frozen forest predictions reproduced within 1e-9 without scikit-learn.
+- 921 new-cohort receipts / 1,187,600,265 bytes and original/resumed source
+  snapshots verified. Audit never refitted the model or tuned thresholds.
+
+Historical suites/reports had 92, 107, 117, 120 or 122 passing tests as coverage
+was added. Those are historical observations; do not mix them with the final 123.
+Software tests are NOT 123 independent clinical safety cases.
+
+Read-only live audit:
+- Local PostgreSQL 17.10 connected while temporary verification server ran.
+- MQTT configured loopback endpoint unreachable; CA/auth credentials missing.
+- Backend URL/service token absent.
+- Telegram token/staff recipient mapping absent.
+- M6 default disabled; external effects simulated; zero clinical messages sent.
+Authenticated publish/subscribe, live backend, real phone/screen and LinuxONE
+checks remain pending. No secrets were guessed and TLS was not bypassed.
+
+Owned disposable DBs sentinel_m6_v2_verify_20261009 and
+sentinel_m6_v2_wheel_20261009 were dropped after verifying no other clients.
+They can be recreated from migrations/fixtures. Server restored STOPPED.
+All datasets, weights, reports and virtualenvs were retained.
+
+To reproduce software checks, first use an appropriate disposable DB and apply
+migrations/checkpointer, then provide:
+SENTINEL_TEST_DATABASE_URL=<protected test DSN>
+SENTINEL_TEST_VITALDB_ROOT=D:/SentinelWard-Data/VitalDB/m6-20261009-run1
+Install dev AND research extras. Put pytest basetemp, JUnit output, uv/mypy/Ruff
+caches and TEMP/TMP on D:. Without dependencies/data/DB, tests may skip; report
+that honestly instead of claiming the same fully enabled 123-test run.
+
+16. ARTIFACTS AND SOURCE NAVIGATION
+
+Read these repo documents first:
+README.md; docs/phases-status.md; docs/implementation-phases.md;
+docs/contracts.md; docs/one-line-output.md; docs/agent-registry.md;
+docs/handoffs.md; docs/failure-policy.md;
+docs/phases-0-1-complete-summary.md;
+docs/phase-0-checklist.md; docs/phase-1-checklist.md;
+docs/phase-1-implementation.md;
+docs/phase-2-architecture.md; docs/phase-2-checklist.md;
+docs/phase-3-plan.md; docs/phase-3-implementation.md; docs/phase-3-checklist.md;
+docs/real-data-verification-2026-10-09.md;
+docs/m6-revalidation-2026-10-09.md.
+docs/phase-3-verification.md contains HISTORICAL 0.3.0/synthetic evidence,
+with a pointer to the newer report; don't present it as current clinical evidence.
+
+Other important paths: src/sentinelward; tests; fixtures; migrations/versions;
+deploy/sentinelward.service; .github/workflows/ci.yml; pyproject.toml; uv.lock.
+Migrations: 0001_phase1_foundation, 0002_phase2_alerts, 0003_phase3_m6.
+
+Data/artifact directories:
+- D:/SentinelWard-Data/VitalDB/m6-20261009-run1 (original public data)
+- D:/SentinelWard-Data/VitalDB/m6-experiment-20261009-run1 (retained failed attempt)
+- D:/SentinelWard-Data/VitalDB/m6-experiment-20261009-run2 (old runtime report)
+- D:/SentinelWard-Data/VitalDB/m6-regression-20261009-run1 (old ridge/features)
+- D:/SentinelWard-Data/VitalDB/m6-20261009-independent-v2 (new screened cohort)
+- D:/SentinelWard-Data/VitalDB/m6-revalidation-20261009-v2 (latest experiment)
+
+Latest experiment contains plan.json, resume-plan.json, validation.json,
+report.json, selected-model.json, heldout-predictions.json, per-patient features,
+quality and scores JSONL, clinical-review-candidates.json, execution-source and
+resumed-execution-source snapshots, audit-final.json and audit-final-source.py.
+Earlier audit.json and audit-v2.json remain preserved. Exact execution snapshots
+matter: first eight cached cases used the original 0.3.1 scorer snapshot; the
+resumed four held-out cases used later metadata/wording cleanup. Later source
+snapshot-helper/reporting edits did not change frozen weights or predictions.
+1,494 low-monitor-MAP review candidate windows came from usable regression
+windows only: not a complete hypotension census and not adjudicated truth.
+
+Latest frozen model SHA-256:
+fcf46ebbc250df079fa1bb84137903a57c15d9df5a3ed037da8c3200e9a5d5ef
+
+Latest wheel:
+D:/SentinelWard-M6-Handoff-Dist-20261009/sentinelward-0.3.1-py3-none-any.whl
+SHA-256: 271fb83e798d66f35828d1b9e7c4895352b8bd86137b56af7a068ebe61286c0e
+Installed core env: D:/SentinelWard-M6-V2-WheelTest-20261009
+Frozen requirements: D:/SentinelWard-M6-V2-Core-Requirements-20261009.txt
+Final JUnit: D:/SentinelWard-Data/VitalDB/m6-final-handoff-tests-20261009.xml
+Connectivity: D:/SentinelWard-Data/VitalDB/m6-v2-connectivity-20261009.json
+
+17. WHAT IS STILL UNFINISHED, EVEN WITH PASSING LOCAL TESTS
+
+Phases 0/1: live access, contract/team confirmations, LinuxONE and integration gates.
+Phase 2: actual screen+phone delivery, authenticated live callbacks, realistic
+roster/waveform wiring and restart during live escalation.
+Phase 3: usable full baselines, better missing-reference handling, robust real
+damping/slow-drift response, reviewed truth/calibration and intended-setting safety.
+
+Clinical evidence still required:
+- Qualified clinician-reviewed genuine drift, stable/no-drift and hypotension
+  episodes, independent malfunction evidence and verified onset/measurement times.
+- Verified cuff acquisitions, clock/device/episode mappings and reference quality.
+- Representative ward/device/population data, including missing data, genuine
+  deterioration and independent external validation.
+- Agreed clinical operating criteria: drift sensitivity, false alarms, delays,
+  false drift during deterioration, coverage/abstention and uncertainty.
+- Reviewed validation threshold selection followed by a frozen NEW patient-held-out
+  safety set. Zero genuine reviewed hypotension observations is NOT a pass.
+- Team/clinical workflow review, authenticated live integration and load tests.
+
+I already answered that I do NOT currently have clinician-reviewed M6 labels or
+verified cuff-acquisition recordings. I instructed: complete research validation
+and list clinical evidence still needed. Do not repeatedly treat that as an
+unanswered question or invent labels to claim readiness.
+
+18. REMAINING PROJECT PHASES — NOT YET IMPLEMENTED AS COMPLETE FEATURES
+
+Phase 4: integrate Kartik's A2/A3/A4 through typed handlers; approved containment,
+untrusted display, evidence snapshots/hash verification/timeline, same-model
+fleet-watch expiry, IT-only idempotent undo. Implement my A6 ticket lifecycle,
+repeat merging and 3 loose events/30 min/device rule. Biomed closes tickets.
+Gate: tampering preserves patient alert while containing/evidencing; undo once;
+drift opens one correct ticket. Existing router stubs do not prove this gate.
+
+Phase 5: my A5 incident-report drafts/missing fields and six-hour deadline;
+A7 two-hour rolling workload counts/charge-nurse warning without reassignment;
+A8 shift/on-demand fact-backed briefing; local Granite narrative generation,
+numeric verifier, provenance and deterministic fallback. No report send tool,
+no source fact modification and no AI-generated operational statuses.
+Gate: every field filled or flagged, every numeric claim matches source data,
+proper human boundaries; feature freeze after accepted critical functions.
+Granite toy feasibility exists; production A5/A7/A8/Granite integration does not.
+
+Phase 6: integrated failure/security/restart tests for all eight verdicts,
+malformed/replayed/out-of-order inputs, DB/MQTT/Telegram/Granite/control outages,
+BOTH containment/evidence/undo, forged roles, prompt injection, M6 genuine
+hypotension/drift safety and load/latency; real 8-12-bed golden demonstration.
+The synthetic M6 12-scenario harness is NOT this integrated demonstration.
+
+Phase 7: pinned deployment/startup/reset/run guide, contract/permission pack,
+known limitations, measured results, screen/video evidence and teammate-led
+demonstration without verbal assistance.
+
+The original phase-hour ranges are planning references, not completed milestones
+or permission to bypass external gates. All phases retain the same short precise
+output, evidence, security and phone-backup requirements.
+
+19. MOST RECENT OPEN QUESTION — DATA AND HIGH ACCURACY
+
+My latest substantive question before requesting this handoff was:
+"If dataset availability is the problem, how do we overcome it and make a good
+M6 model? What is the best approach toward 98-99% accuracy and minimal error,
+less than 1%, without sacrificing workflow compatibility or security?"
+
+Clarify my premise:
+- Public datasets exist and the requested downloads completed. We used limited
+  one/two-hour subsets, not every full recording or the full database.
+- Missing/unsuitable segments, uncertain acquisition timestamps and absence of
+  reviewed M6 truth are different problems from a failed/incomplete download.
+- Conservative design is also a choice in our current eligibility logic. Its
+  feasibility must be evaluated; the dataset is not the sole cause.
+- No perfect model or promised 98-99% performance follows from choosing a dataset.
+- Define what accuracy/error means: drift-event sensitivity/precision/false alarms
+  and coverage versus pressure MAE/mmHg/MAPE. A 99% always-negative classifier
+  on 99%-negative data can miss every drift event.
+- Report all missing/abstained windows and patient-level uncertainty. Never make
+  accuracy look high by evaluating only easy windows or splitting one patient's
+  overlapping windows across train/test.
+- Existing test subjects are now inspected; do not tune against them and call
+  the next result an untouched final test.
+
+Research gathered for that question, NOT IMPLEMENTED OR FULLY FINALIZED:
+1) Expand raw VitalDB case duration/cohort only after signal/reference feasibility
+   audit and an explicit storage budget; do not assume longer data guarantees a
+   fresh-reference baseline. VitalDB is single-institution surgical data.
+   https://physionet.org/content/vitaldb/1.0.0/
+   https://vitaldb.net/dataset/?query=overview
+2) MIMIC-III Waveform Matched Subset can offer another ICU source with ECG,
+   arterial pressure, PPG and numerics, but its official documentation explicitly
+   says channels/measurements are not always simultaneously available. It does
+   not automatically solve cuff timestamps or M6 drift adjudication. Check access
+   terms and clinical-linkage requirements before relying on linked records.
+   https://physionet.org/content/mimic3wdb-matched/1.0/
+3) PulseDB v2 is a larger cleaned ECG/PPG/ABP blood-pressure research dataset,
+   derived from MIMIC-III and VitalDB, with 5,361 subject files. It removes poor
+   quality segments and preserves clip-relative segment time information. It
+   may help pressure-prediction/representation training, but cleaned fragments
+   and arterial-derived pressure targets do not replace raw longitudinal fault
+   data, independently verified cuff references or real M6 drift truth.
+   https://github.com/pulselabteam/PulseDB
+   https://doi.org/10.3389/fdgth.2022.1090854
+   Pay attention to its source-specific licenses and subject overlap. Do not
+   train on PulseDB-derived patients then call their raw VitalDB/MIMIC recordings
+   an independent external test. Never stitch across gaps to invent continuity.
+4) IMDRF clinical-evaluation framework distinguishes valid clinical association,
+   analytical validation and clinical validation. Use it as an evidence framework,
+   not a claim that this project has regulatory approval or a statement of which
+   jurisdiction's legal obligations apply.
+   https://www.imdrf.org/documents/software-medical-device-samd-clinical-evaluation
+
+No PulseDB/MIMIC download, new waveform architecture, new trained/calibrated
+runtime model or clinical data collection was performed for that last question.
+Do not confuse research recommendations with completed code.
+
+20. WHAT I WANT YOU TO DO NEXT
+
+First respond with a concise verified resumption report. Then build a practical
+M6 improvement plan, not a promise of perfection or an immediate unrequested
+rewrite. Suggested order, subject to source review:
+
+A. Recover the exact current state: read local docs/source, check dirty Git state,
+   artifact hashes and disk availability. Refresh Drive/website documents. Do not
+   erase or overwrite current work or expose credentials/patient data.
+B. Define separate measurable goals for pressure prediction, drift detection,
+   patient-deterioration protection, coverage/abstention and response delay. Ask
+   only necessary targeted questions. State which goals need clinical approval.
+C. Audit whether baseline/freshness requirements match real available streams:
+   waveform validity, cuff timestamp provenance/cadence, HR/timing availability,
+   pressure guards, duration and full versus partial readiness. Separate genuine
+   missing data from replay/extraction/design limitations.
+D. Present a justified dataset strategy: raw longitudinal cases for runtime drift
+   and fault testing; larger cleaned data only where appropriate for the pressure
+   branch; clinician-reviewed independent evidence for clinical claims. Retain
+   hard/missing cases in evaluation. No invented cuff values or unsafe patient
+   procedures. Any real patient data collection needs institutional authorization.
+E. Consider reviewed, event-driven cuff evidence and quality-aware baseline modes
+   instead of forcing one gate for every component. This is a PROPOSAL, not an
+   implemented change or approval to weaken guards. Maintain explicit partial
+   readiness and urgent review; do not silently exceed locked design authority.
+F. Compare justified feature/baseline/temporal-model options under a controlled,
+   patient-separated experiment. No claim that a neural network guarantees 99%.
+   Consider the dependence of current amplitude features on the checked ART signal.
+   Known synthetic offsets/ramps/physical damping fixtures help robustness tests
+   but cannot manufacture clinical truth or prove actual attack intent.
+G. Freeze selection on validation; use NEW untouched subjects for final results.
+   Measure subgroup errors, pressure tails, genuine hypotension false drift,
+   coverage and event delay, with independent-patient uncertainty. Report failed
+   hypotheses and regressions rather than hiding them.
+H. If I authorize implementation, make scoped changes, regression tests and
+   installed-package/integration verification. Preserve v1 wire compatibility,
+   the three output audiences, all A1 lifecycle semantics and default-disabled
+   research deployment. Do not retrain M1-M5 or push without my explicit request.
+I. Hand off independently working adapters/fixtures with exact required teammate
+   inputs. List external checks still pending. Do not say everything will work
+   after merge without checking each agreed endpoint/schema/auth/time assumption.
+
+Use concrete evidence and current primary documentation. Explain trade-offs in
+plain language and keep progress updates short. Provide detailed plans when
+requested, but keep live outputs concise and deterministic. Distinguish clearly:
+implemented locally / verified locally / failed readiness / missing live inputs /
+research proposal / clinical evidence pending / officially accepted.
+
+This handoff authorizes reading and planning to resume context. It does not
+authorize a push, deployment, treatment action, contract-breaking change, new
+patient data collection or automatic release of a model into clinical use.
+The workspace and this handoff, not a promise about account-specific chat history,
+are the portable project context. If you lack filesystem access, ask me to attach
+the relevant docs/source/reports; never pretend local paths were inspected.
+
+END OF PROMPT
