@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     backend_max_attempts: int = Field(default=3, ge=1, le=5)
     external_effect_mode: Literal["simulate", "live"] = "simulate"
     m6_enabled: bool = False
+    demo_lifecycle_enabled: bool = False
     m6_contexts_file: Path | None = None
     m6_calibration_file: Path | None = None
     telegram_bot_token: SecretStr | None = None
@@ -47,6 +48,10 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_security(self) -> Settings:
+        if self.demo_lifecycle_enabled and (
+            not self.m6_enabled or self.environment == "design-real"
+        ):
+            raise ValueError("demo lifecycle requires enabled research M6 in test/demo profile")
         if self.m6_enabled:
             if self.m6_contexts_file is None:
                 raise ValueError("M6 requires an explicit episode-context file")

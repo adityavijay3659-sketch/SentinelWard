@@ -20,7 +20,7 @@ from sentinelward.contracts import (
     VitalsMessage,
 )
 
-MODEL_VERSION: Literal["m6-research-0.3.1"] = "m6-research-0.3.1"
+MODEL_VERSION: Literal["m6-research-0.3.4"] = "m6-research-0.3.4"
 
 
 def feature_config_id(config: M6Config) -> str:
@@ -80,6 +80,9 @@ class M6State(BaseModel):
     baseline: list[Features] = Field(default_factory=list)
     baseline_first_ts: int | None = None
     baseline_last_ts: int | None = None
+    # Separate bounded pressure history survives resets of the consecutive
+    # drift baseline. It supports patient-review guards, never drift readiness.
+    pressure_guard_reference: list[FiniteFloat] = Field(default_factory=list, max_length=719)
     ph: PageHinkley = Field(default_factory=PageHinkley)
     peers: list[ScoreMessage] = Field(default_factory=list)
 
@@ -203,6 +206,14 @@ def step(state: M6State, message: VitalsMessage | ScoreMessage) -> ScoreMessage 
         and cuff.ts >= state.context.start_ts
     )
     needed = (state.config.baseline_seconds - 10) // 5 + 1
+    availability = {
+        "complete_window": complete,
+        "pressure_features": features is not None,
+        "hr": features is not None and features.hr is not None,
+        "ecg_ppg_timing": features is not None and features.pat_ms is not None,
+        "fresh_cuff": fresh,
+        "combined_baseline": len(state.baseline) >= needed,
+    }
     extra: dict[str, object] = {
         "mode": "research",
         "score_kind": "evidence_index_not_probability",
@@ -215,11 +226,20 @@ def step(state: M6State, message: VitalsMessage | ScoreMessage) -> ScoreMessage 
         "baseline_windows": len(state.baseline),
         "baseline_required_windows": needed,
         "baseline_ready": len(state.baseline) >= needed,
+        "baseline_policy": "consecutive_eligible_windows_then_frozen",
+        "pressure_guard_reference_windows": len(state.pressure_guard_reference),
+        "baseline_span_ms": (
+            state.baseline_last_ts - state.baseline_first_ts + 10_000
+            if state.baseline_first_ts is not None and state.baseline_last_ts is not None
+            else 0
+        ),
         "assessment_path": "unavailable",
         "feature_config_id": feature_config_id(state.config),
         "drift_candidate": False,
         "frames_received": len(state.frames),
         "shape": "unavailable",
+        "input_availability": availability,
+        "blocking_inputs": [name for name, available in availability.items() if not available],
     }
 
     def output(label: str, reason: str, score: float = 0) -> ScoreMessage:
@@ -266,28 +286,72 @@ def step(state: M6State, message: VitalsMessage | ScoreMessage) -> ScoreMessage 
         return output(
             "emergency_compatible", "Low cuff pressure observed; immediate patient review needed"
         )
+    # Patient-review guards must survive missing timing/morphology features.
+    # These observations are not a diagnosis or proof that ART is accurate.
+    if not state.pressure_guard_reference and state.baseline:
+        state.pressure_guard_reference.extend(row.map for row in state.baseline[:needed])
+    extra["pressure_guard_reference_windows"] = len(state.pressure_guard_reference)
+    base_map = (
+        median(state.pressure_guard_reference)
+        if state.pressure_guard_reference
+        else median(row.map for row in state.baseline)
+        if state.baseline
+        else None
+    )
+    if base_map is not None:
+        extra["pressure_guard_reference_mmhg"] = round(base_map, 3)
+    if (
+        fresh
+        and cuff is not None
+        and base_map is not None
+        and cuff.map <= base_map - state.config.pressure_fall
+    ):
+        extra.update(emergency_compatible=True, pressure_review_basis="cuff_relative_fall")
+        return output(
+            "emergency_compatible", "Cuff pressure fell from baseline; patient review needed"
+        )
+    if features is not None:
+        falling = base_map is not None and features.map <= base_map - state.config.pressure_fall
+        if features.map <= state.config.pressure_floor or falling:
+            extra["emergency_compatible"] = True
+            return output(
+                "emergency_compatible",
+                "Possible patient deterioration; do not dismiss as sensor drift",
+            )
+        # Preserve the historical guard's reference observations independently
+        # of the newer within-window review guards. This is a passive safety
+        # history, not a healthy baseline and never grants drift readiness.
+        if (
+            fresh
+            and cuff is not None
+            and abs(features.map - cuff.map) < state.config.gap_mmhg
+            and features.hr is not None
+            and features.pat_ms is not None
+            and len(state.pressure_guard_reference) < needed
+        ):
+            state.pressure_guard_reference.append(features.map)
+            extra["pressure_guard_reference_windows"] = len(state.pressure_guard_reference)
+    pressure_means = [
+        fmean(frame.abp)
+        for frame in state.frames
+        if frame.abp is not None and all(0 <= value <= 350 for value in frame.abp)
+    ]
+    if pressure_means and min(pressure_means) <= state.config.pressure_floor:
+        extra.update(emergency_compatible=True, pressure_review_basis="observed_low_art")
+        return output(
+            "emergency_compatible", "Low ART pressure observed; review patient and sensor now"
+        )
+    if len(pressure_means) >= 4 and (
+        fmean(pressure_means[:2]) - fmean(pressure_means[-2:]) >= state.config.pressure_fall
+    ):
+        extra.update(emergency_compatible=True, pressure_review_basis="observed_art_fall")
+        return output(
+            "emergency_compatible", "ART pressure fell within window; patient review needed"
+        )
     if features is None:
         return output(
             "insufficient_data",
             "Pressure waveform missing, incomplete or unusable; drift cannot be assessed",
-        )
-    base_map = median(row.map for row in state.baseline) if state.baseline else features.map
-    falling = features.map <= base_map - state.config.pressure_fall
-    confirmed_fall = (
-        fresh
-        and cuff is not None
-        and (
-            cuff.map <= state.config.pressure_floor
-            or (bool(state.baseline) and cuff.map <= base_map - state.config.pressure_fall)
-            or (falling and abs(features.map - cuff.map) < state.config.gap_mmhg)
-        )
-    )
-    # Conservative guard: low ART, cuff-confirmed fall, or any substantial fall.
-    # This knowingly reduces negative-offset sensitivity until clinical review.
-    if features.map <= state.config.pressure_floor or confirmed_fall or falling:
-        extra["emergency_compatible"] = True
-        return output(
-            "emergency_compatible", "Possible patient deterioration; do not dismiss as sensor drift"
         )
     if not fresh or cuff is None:
         return output(
@@ -320,6 +384,11 @@ def step(state: M6State, message: VitalsMessage | ScoreMessage) -> ScoreMessage 
         )
     if len(state.baseline) < needed:
         if state.baseline_last_ts is None or start - state.baseline_last_ts >= 5000:
+            if state.baseline_last_ts is not None and start - state.baseline_last_ts > 5000:
+                # Sparse windows spread over hours are not a 15-minute baseline.
+                state.baseline.clear()
+                state.baseline_first_ts = None
+                extra["baseline_restarted_after_gap"] = True
             state.baseline.append(features)
             state.baseline_first_ts = (
                 state.baseline_first_ts if state.baseline_first_ts is not None else start
@@ -327,6 +396,12 @@ def step(state: M6State, message: VitalsMessage | ScoreMessage) -> ScoreMessage 
             state.baseline_last_ts = start
         extra["baseline_windows"] = len(state.baseline)
         extra["baseline_ready"] = len(state.baseline) >= needed
+        assert state.baseline_first_ts is not None
+        extra["baseline_span_ms"] = start - state.baseline_first_ts + 10_000
+        availability["combined_baseline"] = len(state.baseline) >= needed
+        extra["blocking_inputs"] = [
+            name for name, available in availability.items() if not available
+        ]
         return output(
             "warming_up", "Collecting usable patient baseline; drift assessment not ready"
         )

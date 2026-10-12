@@ -120,6 +120,8 @@ class MqttOutboxWorker:
 
     async def _deliver(self, event: dict[str, object]) -> None:
         delivery_key = str(event["delivery_key"])
+        if not await self.store.outbox_is_pending(delivery_key):
+            return
         payload = event.get("payload")
         if not isinstance(payload, dict):
             await self.store.reschedule_outbox(

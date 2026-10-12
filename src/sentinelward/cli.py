@@ -32,6 +32,11 @@ from sentinelward.alerts import AlertCoordinator
 from sentinelward.api import create_app
 from sentinelward.config import Settings
 from sentinelward.contracts import VerdictMessage
+from sentinelward.demo_lifecycle import (
+    DemoM6Handler,
+    PostgresDemoRepository,
+    monitor_demo_lifecycle,
+)
 from sentinelward.engine import AutomationEngine
 from sentinelward.health import HealthRegistry
 from sentinelward.logging_config import configure_logging
@@ -40,7 +45,7 @@ from sentinelward.persistence import PostgresStore
 from sentinelward.phase2_actions import Phase2ActionPort
 from sentinelward.ports import ActionPort
 from sentinelward.scheduler import DurableAlertScheduler, register_escalation_target
-from sentinelward.service import MessageService
+from sentinelward.service import M6Handler, MessageService
 
 
 def parser() -> argparse.ArgumentParser:
@@ -217,19 +222,27 @@ async def serve(settings: Settings) -> None:
             action_port = simulated_actions
 
         engine = AutomationEngine(store=store, action_port=action_port, checkpointer=checkpointer)
+        m6_handler: M6Handler | None = None
+        demo_handler: DemoM6Handler | None = None
+        if settings.m6_enabled and settings.m6_contexts_file is not None:
+            contexts = load_contexts(settings.m6_contexts_file)
+            m6_config = config_from_artifact(settings.m6_calibration_file)
+            if settings.demo_lifecycle_enabled:
+                demo_handler = DemoM6Handler(
+                    PostgresDemoRepository(settings.database_url), contexts, m6_config
+                )
+                m6_handler = demo_handler
+            else:
+                m6_handler = PostgresM6Handler(settings.database_url, contexts, m6_config)
         message_service = MessageService(
             settings,
             store,
             engine,
             health,
             bedside_handler=alert_coordinator,
-            m6_handler=PostgresM6Handler(
-                settings.database_url,
-                load_contexts(settings.m6_contexts_file),
-                config_from_artifact(settings.m6_calibration_file),
-            )
-            if settings.m6_enabled and settings.m6_contexts_file is not None
-            else None,
+            m6_handler=m6_handler,
+            demo_handler=demo_handler,
+            alert_request_handler=alert_coordinator,
         )
         loop = asyncio.get_running_loop()
         mqtt = MqttAdapter(
@@ -244,6 +257,7 @@ async def serve(settings: Settings) -> None:
             tls=settings.mqtt_tls,
             ca_file=settings.mqtt_ca_file,
             m6_enabled=settings.m6_enabled,
+            demo_enabled=settings.demo_lifecycle_enabled,
         )
         health.set("mqtt", await mqtt.start())
         poller_task: asyncio.Task[None] | None = None
@@ -260,6 +274,7 @@ async def serve(settings: Settings) -> None:
         application = create_app(
             health,
             alerts=alert_coordinator,
+            demo=demo_handler,
             service_token=(
                 settings.backend_service_token.get_secret_value()
                 if settings.backend_service_token
@@ -277,9 +292,16 @@ async def serve(settings: Settings) -> None:
         monitor = asyncio.create_task(
             monitor_dependencies(health=health, store=store, mqtt=mqtt, backend=backend)
         )
+        demo_monitor = (
+            asyncio.create_task(monitor_demo_lifecycle(demo_handler)) if demo_handler else None
+        )
         try:
             await server.serve()
         finally:
+            if demo_monitor is not None:
+                demo_monitor.cancel()
+                with suppress(asyncio.CancelledError):
+                    await demo_monitor
             if outbox_worker is not None:
                 await outbox_worker.stop()
             if outbox_task is not None:

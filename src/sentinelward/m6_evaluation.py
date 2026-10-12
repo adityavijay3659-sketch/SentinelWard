@@ -56,7 +56,7 @@ class LabelledWindow(BaseModel):
 class CalibrationArtifact(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
     artifact_id: str
-    model_version: Literal["m6-research-0.3.1"] = MODEL_VERSION
+    model_version: Literal["m6-research-0.3.4"] = MODEL_VERSION
     split: SplitManifest
     config: M6Config
     validation_sha256: str
@@ -105,13 +105,28 @@ def validate_records(
         if event in events and events[event] != fact:
             raise ValueError("event truth/onset is inconsistent")
         events[event] = fact
+        if (
+            record.truth in {"drift", "tampering"}
+            and record.onset_ms is not None
+            and record.score.window_start + record.score.window_s * 1000 <= record.onset_ms
+        ):
+            raise ValueError("positive event window must extend beyond its onset")
         extra = record.score.extra
         if extra.get("feature_config_id") != feature_config_id(config):
             raise ValueError("record features were produced with a different M6 configuration")
-        if not isinstance(extra.get("drift_candidate"), bool) or not isinstance(
-            extra.get("inputs_sufficient"), bool
+        if (
+            not isinstance(extra.get("drift_candidate"), bool)
+            or not isinstance(extra.get("inputs_sufficient"), bool)
+            or not isinstance(extra.get("emergency_compatible"), bool)
         ):
             raise ValueError("M6 evidence metadata is missing")
+
+
+def assessed(record: LabelledWindow) -> bool:
+    return (
+        record.score.extra.get("inputs_sufficient") is True
+        and record.score.extra.get("emergency_compatible") is False
+    )
 
 
 def predicted_drift(record: LabelledWindow, threshold: float) -> bool:
@@ -141,6 +156,9 @@ def calibrate(
         raise ValueError(
             "validation requires stable, injected-drift and reviewed hypotension labels"
         )
+    stable = [record for record in records if record.truth == "stable" and assessed(record)]
+    if not stable:
+        raise ValueError("validation requires assessed stable windows; abstentions are not passes")
     candidates = sorted(
         {0.01, 1.0, *(record.score.score for record in records if record.score.score > 0)}
     )
@@ -151,7 +169,6 @@ def calibrate(
             for record in records
             if record.truth in {"drift", "tampering"}
         )
-        stable = [record for record in records if record.truth == "stable"]
         fp = sum(predicted_drift(record, threshold) for record in stable)
         unsafe = any(
             predicted_drift(record, threshold)
@@ -187,16 +204,25 @@ def evaluate(records: list[LabelledWindow], artifact: CalibrationArtifact) -> di
     threshold = artifact.config.evidence_threshold
     truth_counts = Counter(record.truth for record in records)
     tp = fp = fn = tn = unsafe = 0
+    unassessed = protected = hypo_unassessed = 0
+    unassessed_positive = unassessed_negative = 0
     baseline_tp = baseline_fp = baseline_unsafe = 0
     cause_confusion: Counter[str] = Counter()
     delays: dict[tuple[str, str], int | None] = {}
     for record in records:
         positive = record.truth in {"drift", "tampering"}
         predicted = predicted_drift(record, threshold)
+        urgent = record.score.extra.get("emergency_compatible") is True
+        unknown = not assessed(record) and not urgent
+        unassessed += int(unknown)
+        protected += int(urgent)
+        unassessed_positive += int(unknown and positive)
+        unassessed_negative += int(unknown and not positive)
+        hypo_unassessed += int(unknown and record.truth == "hypotension")
         tp += int(positive and predicted)
         fp += int(not positive and predicted)
         fn += int(positive and not predicted)
-        tn += int(not positive and not predicted)
+        tn += int(not positive and not predicted and assessed(record))
         unsafe += int(record.truth == "hypotension" and predicted)
         gap = record.score.extra.get("gap_mmhg")
         baseline_predicted = isinstance(gap, (int, float)) and abs(gap) >= artifact.config.gap_mmhg
@@ -216,12 +242,32 @@ def evaluate(records: list[LabelledWindow], artifact: CalibrationArtifact) -> di
                 if delay >= 0 and (previous_delay is None or delay < previous_delay):
                     delays[key] = delay
     hypo_patients = {record.patient_id for record in records if record.truth == "hypotension"}
+    assessed_stable = [
+        record for record in records if record.truth == "stable" and assessed(record)
+    ]
+    stable_fp = sum(predicted_drift(record, threshold) for record in assessed_stable)
+    hypo_review_missed = sum(
+        record.score.extra.get("emergency_compatible") is not True
+        for record in records
+        if record.truth == "hypotension"
+    )
     measured = [delay for delay in delays.values() if delay is not None]
     real_gate = (
         artifact.split.source == "vitaldb"
         and artifact.split.labels_reviewed
         and truth_counts["hypotension"] > 0
+        and truth_counts["stable"] > 0
+        and truth_counts["drift"] > 0
         and unsafe == 0
+        and unassessed == 0
+        and tp > 0
+        and all(
+            record.score.extra.get("emergency_compatible") is True
+            for record in records
+            if record.truth == "hypotension"
+        )
+        and bool(assessed_stable)
+        and stable_fp / len(assessed_stable) <= artifact.stable_fp_limit
     )
     return {
         "model_version": MODEL_VERSION,
@@ -236,13 +282,24 @@ def evaluate(records: list[LabelledWindow], artifact: CalibrationArtifact) -> di
         "fp": fp,
         "fn": fn,
         "tn": tn,
+        "unassessed_windows": unassessed,
+        "unassessed_positive_windows": unassessed_positive,
+        "unassessed_negative_windows": unassessed_negative,
+        "protected_patient_review_windows": protected,
+        "assessed_drift_windows": sum(assessed(record) for record in records),
+        "drift_assessment_coverage": sum(assessed(record) for record in records) / len(records),
+        "denominator_policy": "abstentions and urgent review are not true negatives",
         "drift_sensitivity": tp / (tp + fn) if tp + fn else None,
         "false_positive_rate": fp / (fp + tn) if fp + tn else None,
+        "stable_assessed_windows": len(assessed_stable),
+        "stable_false_positive_rate": stable_fp / len(assessed_stable) if assessed_stable else None,
         "hypotension_false_drift": unsafe,
         "hypotension_windows": truth_counts["hypotension"],
+        "hypotension_unassessed_windows": hypo_unassessed,
+        "hypotension_patient_review_missed_windows": hypo_review_missed,
         "hypotension_patients": len(hypo_patients),
         "zero_failure_patient_upper95": 1 - math.pow(0.05, 1 / len(hypo_patients))
-        if hypo_patients and unsafe == 0
+        if hypo_patients and unsafe == 0 and hypo_review_missed == 0
         else None,
         "inputs_sufficient_windows": sum(
             record.score.extra.get("inputs_sufficient") is True for record in records

@@ -8,7 +8,8 @@ from fastapi.responses import JSONResponse, PlainTextResponse
 from pydantic import BaseModel, ConfigDict
 
 from sentinelward.alerts import AlertRecord
-from sentinelward.contracts import StaffId, TimestampMs
+from sentinelward.contracts import DemoSourceEnd, StaffId, TimestampMs
+from sentinelward.demo_lifecycle import DemoM6Handler
 from sentinelward.health import HealthRegistry
 from sentinelward.presentation import alert_output_views, render_alert
 
@@ -37,6 +38,7 @@ def create_app(
     health: HealthRegistry,
     *,
     alerts: AlertCommands | None = None,
+    demo: DemoM6Handler | None = None,
     service_token: str | None = None,
 ) -> FastAPI:
     app = FastAPI(title="SentinelWard automation", version="0.2.0", docs_url=None)
@@ -61,6 +63,28 @@ def create_app(
         scheme, _, supplied = (authorization or "").partition(" ")
         if scheme.lower() != "bearer" or not secrets.compare_digest(supplied, service_token):
             raise HTTPException(status_code=401, detail="invalid service identity")
+
+    @app.get("/internal/v1/demo/status")
+    async def demo_status(
+        authorization: Annotated[str | None, Header()] = None,
+    ) -> dict[str, object]:
+        await authorize(authorization)
+        if demo is None:
+            raise HTTPException(status_code=503, detail="demo lifecycle is unavailable")
+        return await demo.snapshot()
+
+    @app.post("/internal/v1/demo/source-end")
+    async def demo_source_end(
+        event: DemoSourceEnd, authorization: Annotated[str | None, Header()] = None
+    ) -> dict[str, object]:
+        await authorize(authorization)
+        if demo is None:
+            raise HTTPException(status_code=503, detail="demo lifecycle is unavailable")
+        try:
+            await demo.source_end(event)
+        except ValueError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        return await demo.snapshot()
 
     @app.post("/internal/v1/alerts/{alert_id}/ack")
     async def acknowledge(

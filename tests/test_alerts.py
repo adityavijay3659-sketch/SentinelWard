@@ -267,7 +267,7 @@ async def test_higher_priority_verdict_upgrades_same_alert(
 async def test_manual_escalation_replaces_timer_and_starts_next_delay_from_click(
     contract_fixture: dict[str, Any], roster: RosterSnapshot
 ) -> None:
-    service, _, _, telegram, scheduler = coordinator(roster)
+    service, _, publisher, telegram, scheduler = coordinator(roster)
     alert = await service.handle_verdict(
         VerdictMessage.model_validate(contract_fixture["verdicts"][1]).model_copy(
             update={"bed_id": "B02"}
@@ -290,6 +290,10 @@ async def test_manual_escalation_replaces_timer_and_starts_next_delay_from_click
         "staff:priya",
         "staff:ravi",
     ]
+    escalation_action = next(
+        action for action in publisher.actions if action["action"] == "escalate"
+    )
+    assert escalation_action["approved_by"] == "staff:priya"
 
 
 @pytest.mark.asyncio

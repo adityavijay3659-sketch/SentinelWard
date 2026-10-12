@@ -13,6 +13,8 @@ import json
 import math
 import random
 import re
+import shutil
+import threading
 import time
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
@@ -34,6 +36,30 @@ REQUIRED = (
     *[TRACKS[key] for key in ("abp", "ecg", "ppg", "hr", "sys", "dia", "map")],
     "Solar8000/ART_MBP",
 )
+
+
+class DownloadBudget:
+    """Shared conservative byte budget, including retries and reused cached tracks."""
+
+    def __init__(self, root: Path, limit_bytes: int, reserve_bytes: int) -> None:
+        if limit_bytes <= 0 or reserve_bytes < 0:
+            raise ValueError("invalid download storage budget")
+        self.root = root
+        self.limit_bytes = limit_bytes
+        self.reserve_bytes = reserve_bytes
+        self.consumed_bytes = 0
+        self._next_disk_check = 0
+        self._lock = threading.Lock()
+
+    def consume(self, size: int) -> None:
+        with self._lock:
+            if size < 0 or self.consumed_bytes + size > self.limit_bytes:
+                raise ValueError("cohort download byte budget exhausted; partial data retained")
+            if self.consumed_bytes + size >= self._next_disk_check:
+                if shutil.disk_usage(self.root).free - size < self.reserve_bytes:
+                    raise ValueError("cohort disk reserve reached; partial data retained")
+                self._next_disk_check = self.consumed_bytes + size + 1_048_576
+            self.consumed_bytes += size
 
 
 def selection_cases(plan: dict[str, Any]) -> list[dict[str, Any]]:
@@ -59,7 +85,11 @@ def checksum(path: Path) -> str:
 
 
 def download(
-    client: httpx.Client, resource: str, path: Path, duration: int | None = None
+    client: httpx.Client,
+    resource: str,
+    path: Path,
+    duration: int | None = None,
+    budget: DownloadBudget | None = None,
 ) -> dict[str, Any]:
     """Retry bounded read-only requests; atomic promotion and hashes allow safe resume."""
     if not re.fullmatch(r"cases|trks|[a-f0-9]{40}", resource):
@@ -69,6 +99,8 @@ def download(
         previous = json.loads(receipt.read_text(encoding="utf-8"))
         if previous["sha256"] != checksum(path) or previous["duration_s"] != duration:
             raise ValueError("download cache integrity or duration mismatch")
+        if budget is not None:
+            budget.consume(path.stat().st_size)
         return dict(previous)
     if path.exists():
         raise FileExistsError("existing track has no verified receipt")
@@ -87,6 +119,8 @@ def download(
                         size += len(line.encode()) + 1
                         if size > 150_000_000:
                             raise ValueError("track exceeds download budget")
+                        if budget is not None:
+                            budget.consume(len(line.encode()) + 1)
                         stream.write(line + "\n")
                         if duration is not None and count > 0:
                             first = line.split(",", 1)[0]

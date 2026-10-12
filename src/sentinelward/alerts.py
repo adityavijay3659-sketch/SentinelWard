@@ -338,7 +338,12 @@ class AlertCoordinator:
             if alert.status == "acknowledged" or alert.ladder_step == 3:
                 return alert
             await self._scheduler.cancel(alert.alert_id)
-            return await self._advance(alert, alert.ladder_step + 1, at_ms=at_ms)
+            return await self._advance(
+                alert,
+                alert.ladder_step + 1,
+                at_ms=at_ms,
+                approved_by=by,
+            )
 
     async def escalate_due(self, alert_id: str, expected_step: int) -> AlertRecord | None:
         async with self._transition_lock:
@@ -349,7 +354,14 @@ class AlertCoordinator:
                 return alert
             return await self._advance(alert, expected_step, at_ms=self._clock())
 
-    async def _advance(self, alert: AlertRecord, step: int, *, at_ms: int) -> AlertRecord:
+    async def _advance(
+        self,
+        alert: AlertRecord,
+        step: int,
+        *,
+        at_ms: int,
+        approved_by: str | None = None,
+    ) -> AlertRecord:
         if alert.roster is None:
             return alert
         new_recipients = recipients_for_step(alert.roster, step)
@@ -370,6 +382,7 @@ class AlertCoordinator:
             action="escalate",
             result="ok",
             detail=f"A1 advanced {updated.alert_id} to ladder step {step}",
+            approved_by=approved_by,
         )
         already = set(alert.recipients)
         await self._notify_new_recipients(

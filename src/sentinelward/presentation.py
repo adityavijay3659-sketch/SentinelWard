@@ -9,6 +9,9 @@ from sentinelward.contracts import (
     ActionMessage,
     AlertMessage,
     BedsideCheckMessage,
+    DemoControlMessage,
+    RecordMessage,
+    RequestMessage,
     ScoreMessage,
     Verdict,
     VerdictMessage,
@@ -276,9 +279,29 @@ def wire_output_views(message: WireMessage, routed_agents: Iterable[str] = ()) -
             key_fact=f"{message.device_id}; seq={message.seq}; fs={message.fs}",
             result="RECEIVED",
         )
-    else:
+    elif isinstance(message, BedsideCheckMessage):
         user = render_user_bedside(message)
         team = render_bedside(message)
+    else:
+        subject = "WARD"
+        event: str
+        fact: str
+        result: str
+        if isinstance(message, DemoControlMessage):
+            event, fact, result = "DEMO CONTROL", message.cmd, "REQUEST RECEIVED"
+        elif isinstance(message, RequestMessage):
+            subject = message.bed_id or "WARD"
+            event, fact, result = "STAFF REQUEST", message.action, "REQUEST RECEIVED"
+        elif isinstance(message, RecordMessage):
+            event, fact, result = "AGENT RECORD", message.kind, "RECORD RECEIVED"
+        user = render_line(
+            timestamp_ms=message.ts,
+            subject=subject,
+            source_event=event,
+            key_fact=fact,
+            result=result,
+        )
+        team = user
     return OutputViews(user=user, team=team, model=message.model_dump(mode="json"))
 
 

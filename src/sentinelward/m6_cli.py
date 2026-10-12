@@ -40,6 +40,11 @@ def add_m6_parser(subcommands: argparse._SubParsersAction[argparse.ArgumentParse
     evaluation.add_argument("--report", type=Path, required=True)
     demo = commands.add_parser("demo")
     demo.add_argument("--report", type=Path)
+    preflight = commands.add_parser("preflight", help="read-only local dataset coverage audit")
+    local = preflight.add_mutually_exclusive_group(required=True)
+    local.add_argument("--root", type=Path)
+    local.add_argument("--manifest", type=Path)
+    preflight.add_argument("--report", type=Path, required=True)
 
 
 def save_new(path: Path, value: object) -> None:
@@ -112,6 +117,18 @@ def run_m6(arguments: argparse.Namespace) -> None:
             f"{report['windows']} windows; hypotension false drift="
             f"{report['hypotension_false_drift']}/{report['hypotension_windows']}",
             "REVIEW REQUIRED",
+        )
+    elif arguments.operation == "preflight":
+        from sentinelward.m6_quality import preflight
+
+        if arguments.report.exists():
+            raise FileExistsError("preflight report already exists")
+        report = preflight(root=arguments.root, manifest=arguments.manifest)
+        save_new(arguments.report, report)
+        summary(
+            "M6 DATA PREFLIGHT",
+            f"baseline ready {report['baseline_ready_patients']}/{report['patients']} patients",
+            "RESEARCH ONLY",
         )
     else:
         report = run_demo()

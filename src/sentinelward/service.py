@@ -7,6 +7,8 @@ from typing import Protocol
 from sentinelward.config import Settings
 from sentinelward.contracts import (
     BedsideCheckMessage,
+    DemoControlMessage,
+    RequestMessage,
     ScoreMessage,
     VerdictMessage,
     VitalsMessage,
@@ -29,6 +31,15 @@ class M6Handler(Protocol):
     async def handle_m6(self, message: VitalsMessage | ScoreMessage) -> ScoreMessage | None: ...
 
 
+class DemoControlHandler(Protocol):
+    async def handle_control(self, command: DemoControlMessage) -> None: ...
+
+
+class AlertRequestHandler(Protocol):
+    async def acknowledge(self, alert_id: str, *, by: str, at_ms: int, event_id: str) -> object: ...
+    async def escalate(self, alert_id: str, *, by: str, at_ms: int, event_id: str) -> object: ...
+
+
 @dataclass(slots=True)
 class MessageService:
     settings: Settings
@@ -37,6 +48,8 @@ class MessageService:
     health: HealthRegistry
     bedside_handler: BedsideHandler | None = None
     m6_handler: M6Handler | None = None
+    demo_handler: DemoControlHandler | None = None
+    alert_request_handler: AlertRequestHandler | None = None
 
     async def handle(self, topic: str, payload: bytes) -> bool:
         try:
@@ -74,6 +87,48 @@ class MessageService:
             self.health.increment("recovery_resume")
 
         self.health.increment("accepted")
+        if isinstance(message, DemoControlMessage):
+            try:
+                if self.demo_handler is None:
+                    raise ValueError("demo lifecycle is not enabled")
+                await self.demo_handler.handle_control(message)
+            except ValueError as exc:
+                await self.store.record_dead_letter(
+                    topic=topic, payload=payload, code="DEMO_CONTROL_REJECTED", detail=str(exc)
+                )
+                self.health.increment("demo_rejected")
+            else:
+                self.health.increment("demo_control_processed")
+        elif isinstance(message, RequestMessage):
+            if message.action in {"ack_alert", "escalate_alert"}:
+                try:
+                    if self.alert_request_handler is None:
+                        raise ValueError("A1 alert request handler is unavailable")
+                    operation = (
+                        self.alert_request_handler.acknowledge
+                        if message.action == "ack_alert"
+                        else self.alert_request_handler.escalate
+                    )
+                    await operation(
+                        message.target_id,
+                        by=message.by,
+                        at_ms=message.ts,
+                        event_id=message.request_id,
+                    )
+                except (PermissionError, LookupError, ValueError) as exc:
+                    await self.store.record_dead_letter(
+                        topic=topic, payload=payload, code="ALERT_REQUEST_REJECTED", detail=str(exc)
+                    )
+                    self.health.increment("request_rejected")
+                else:
+                    self.health.increment("alert_request_processed")
+            else:
+                await self.store.append_audit(
+                    correlation_id=message.request_id,
+                    event_type="request.not_owned",
+                    actor=message.by,
+                    detail={"action": message.action, "target_id": message.target_id},
+                )
         if self.m6_handler is not None and (
             isinstance(message, VitalsMessage)
             or (isinstance(message, ScoreMessage) and message.model in {"M3", "M5"})

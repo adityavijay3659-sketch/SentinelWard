@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "sentinelward"
-version = "0.3.1"
+version = "0.3.4"
 description = "Restart-safe automation foundation for SentinelWard"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
@@ -45,6 +45,7 @@ packages = ["src/sentinelward"]
 "migrations" = "sentinelward/migrations"
 "fixtures/contract-examples.json" = "sentinelward/fixtures/contract-examples.json"
 "fixtures/m6-contexts.example.json" = "sentinelward/fixtures/m6-contexts.example.json"
+"fixtures/demo-m6-contexts.v1.1.example.json" = "sentinelward/fixtures/demo-m6-contexts.v1.1.example.json"
 "fixtures/m6-vitaldb-manifest.example.json" = "sentinelward/fixtures/m6-vitaldb-manifest.example.json"
 
 [tool.pytest.ini_options]

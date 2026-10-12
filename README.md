@@ -46,6 +46,9 @@ The [M6-only revalidation](docs/m6-revalidation-2026-10-09.md) fixes cold-start
 gap assessment and evaluates controlled drift on 12 new subjects. Offline MAE
 is 8.55 versus 10.10 mmHg on the same held-out windows; full baseline readiness
 remains 0/12 and clinical deployment is not approved.
+The [M6 repair evidence](docs/m6-repairs-2026-10-10.md) documents pressure-guard,
+baseline continuity, abstention/evaluation and replay-clock fixes, plus dataset
+preflight, bounded cohort configuration and reproducible local verification.
 For live research ingestion, supply an episode/device map and enable M6 explicitly;
 see [Phase 3 operation and handoff](docs/phase-3-implementation.md).
 Human output is one line of at most 160 characters; machine JSON preserves all fields.
@@ -82,8 +85,8 @@ Human output is one line of at most 160 characters; machine JSON preserves all f
 - [Phase 3 plan](docs/phase-3-plan.md)
 - [Phase 3 implementation and handoff](docs/phase-3-implementation.md)
 - [Phase 3 completion checklist](docs/phase-3-checklist.md)
-- [Historical synthetic verification evidence](docs/phase-3-verification.md)
-- [Latest M6 real-data revalidation](docs/m6-revalidation-2026-10-09.md)
+- [Current verification evidence](docs/phase-3-verification.md)
+- [Doc 00 v1.1 demo lifecycle integration](docs/demo-v1.1-integration.md)
 - [Detailed new-chat continuation handoff](docs/new-chat-handoff-2026-10-09.txt)
 - [Publication verification](docs/publication-verification-2026-10-09.md)
 - [Operations runbook](docs/runbook.md)

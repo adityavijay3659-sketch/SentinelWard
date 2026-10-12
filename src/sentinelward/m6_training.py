@@ -130,7 +130,7 @@ def extract_case(folder: Path, out: Path) -> tuple[list[dict[str, Any]], dict[st
         if features is None or features.hr is None or features.pat_ms is None:
             unusable += 1
             continue
-        measurement = target.recent(frame.ts / 1000, 5)
+        measurement = target.recent((frame.ts - manifest.context.start_ts) / 1000, 5)
         if measurement is None or not 20 <= measurement[1] <= 200:
             target_missing += 1
             continue

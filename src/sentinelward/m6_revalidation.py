@@ -33,11 +33,11 @@ VARIANTS = (
 )
 
 
-def modify(frame: VitalsMessage, variant: str) -> VitalsMessage:
-    if frame.ts < ONSET:
+def modify(frame: VitalsMessage, variant: str, onset_ms: int = ONSET) -> VitalsMessage:
+    if frame.ts < onset_ms:
         return frame
     if variant == "ramp_30min_plus_15" and frame.abp is not None:
-        shift = min(15.0, 15 * (frame.ts - ONSET) / 1_800_000)
+        shift = min(15.0, 15 * (frame.ts - onset_ms) / 1_800_000)
         return frame.model_copy(update={"abp": [value + shift for value in frame.abp]})
     if variant == "coupled_low_pressure_control":
         cuff = CuffReading(sys=80, dia=40, map=55, ts=frame.nibp.ts) if frame.nibp else None
@@ -46,7 +46,7 @@ def modify(frame: VitalsMessage, variant: str) -> VitalsMessage:
             centre = fmean(frame.abp)
             abp = [55 + 0.2 * (value - centre) for value in frame.abp]
         return frame.model_copy(update={"abp": abp, "nibp": cuff})
-    return perturb(frame, variant, ONSET)
+    return perturb(frame, variant, onset_ms)
 
 
 def case_run(
@@ -59,6 +59,7 @@ def case_run(
         waveform=False,
     )
     states = {name: M6State(context=manifest.context, config=M6Config()) for name in VARIANTS}
+    onset = manifest.context.start_ts + ONSET
     rows: list[dict[str, Any]] = []
     records: list[dict[str, Any]] = []
     reasons: Counter[str] = Counter()
@@ -69,7 +70,7 @@ def case_run(
         for frame in replay_vitaldb(manifest, folder):
             for variant, state in states.items():
                 before = time.perf_counter()
-                score = step(state, modify(frame, variant))
+                score = step(state, modify(frame, variant, onset))
                 elapsed = (time.perf_counter() - before) * 1000
                 if score is None:
                     continue
@@ -77,8 +78,8 @@ def case_run(
                 record = {
                     "patient_id": manifest.patient_id,
                     "variant": variant,
-                    "event_active": score.window_start >= ONSET,
-                    "onset_ms": ONSET,
+                    "event_active": score.window_start >= onset,
+                    "onset_ms": onset,
                     "clinical_labels_reviewed": False,
                     "score": score.model_dump(mode="json"),
                 }
@@ -93,7 +94,7 @@ def case_run(
                     score.label, {"user": views.user, "team": views.team, "model": views.model}
                 )
                 features = score.extra.get("features", {})
-                observation = target.recent(frame.ts / 1000, 5)
+                observation = target.recent((frame.ts - manifest.context.start_ts) / 1000, 5)
                 if (
                     features.get("hr") is not None
                     and features.get("pat_ms") is not None
@@ -168,14 +169,17 @@ def drift_metrics(records: list[dict[str, Any]], threshold: float) -> dict[str, 
             for r in selected
             if not positive(reference[(r["patient_id"], r["score"]["window_start"])])
         ]
+        attributable = (
+            hits if variant in {"reference", "coupled_low_pressure_control"} else new_hits
+        )
         delays = {
             patient: min(
-                r["score"]["window_start"] + 10_000 - ONSET
-                for r in hits
+                r["score"]["window_start"] + 10_000 - r.get("onset_ms", ONSET)
+                for r in attributable
                 if r["patient_id"] == patient
             )
             for patient in subjects
-            if any(r["patient_id"] == patient for r in hits)
+            if any(r["patient_id"] == patient for r in attributable)
         }
         sufficient = sum(r["score"]["extra"]["inputs_sufficient"] is True for r in selected)
         result[variant] = {
@@ -192,6 +196,9 @@ def drift_metrics(records: list[dict[str, Any]], threshold: float) -> dict[str, 
             else None,
             "subjects_with_drift_prediction": len(delays),
             "detection_delay_ms": delays,
+            "delay_policy": "additional predictions over paired reference"
+            if variant not in {"reference", "coupled_low_pressure_control"}
+            else "raw predictions; no clinical detection claim",
             "urgent_windows": sum(r["score"]["label"] == "emergency_compatible" for r in selected),
             "interpretation": "controlled perturbation, not clinical sensitivity"
             if variant not in {"reference", "coupled_low_pressure_control"}

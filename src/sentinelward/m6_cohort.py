@@ -14,14 +14,34 @@ import httpx
 
 from sentinelward.m6 import EpisodeContext
 from sentinelward.m6_cli import save_new
-from sentinelward.m6_realdata import REQUIRED, checksum, download
+from sentinelward.m6_realdata import REQUIRED, DownloadBudget, checksum, download, selection_cases
 from sentinelward.m6_replay import ReplayManifest, read_track
 
 
-def build(previous: Path, root: Path, count: int = 12, duration: int = 7200) -> None:
-    root.mkdir(parents=True, exist_ok=False)
+def build(
+    previous: Path,
+    root: Path,
+    count: int = 12,
+    duration: int = 7200,
+    *,
+    exclude_selections: tuple[Path, ...] = (),
+    max_bytes: int = 10 * 1024**3,
+    reserve_bytes: int = 30 * 1024**3,
+) -> None:
+    if count < 6 or count > 60 or count % 3 or not 900 <= duration <= 21_600:
+        raise ValueError("cohort requires 6..60 subjects in triples and 900..21600 seconds")
+    if max_bytes <= 0 or reserve_bytes < 0:
+        raise ValueError("invalid cohort storage budget")
     old = json.loads((previous / "selection.json").read_text(encoding="utf-8"))
-    excluded = {case["patient_id"] for case in old["cases"]}
+    excluded = {case["patient_id"] for case in selection_cases(old)}
+    excluded_hashes = {}
+    for path in exclude_selections:
+        selection = json.loads(path.read_text(encoding="utf-8"))
+        excluded.update(case["patient_id"] for case in selection_cases(selection))
+        excluded_hashes[str(path)] = checksum(path)
+    root.mkdir(parents=True, exist_ok=False)
+    budget = DownloadBudget(root, max_bytes, reserve_bytes)
+    budget.consume(0)
     with (previous / "cases.csv").open(encoding="utf-8") as stream:
         cases = list(csv.DictReader(stream))
     available: dict[str, dict[str, str]] = {}
@@ -43,6 +63,9 @@ def build(previous: Path, root: Path, count: int = 12, duration: int = 7200) -> 
             "seed": 20261010,
             "count": count,
             "duration_s": duration,
+            "download_byte_budget": max_bytes,
+            "disk_reserve_bytes": reserve_bytes,
+            "additional_excluded_selection_sha256": excluded_hashes,
             "exclude_subjects": sorted(excluded),
             "criterion": (
                 "at least 200 five-second windows with a changed cuff reference "
@@ -52,6 +75,8 @@ def build(previous: Path, root: Path, count: int = 12, duration: int = 7200) -> 
             "reference_age_seconds": 120,
             "maximum_candidates": 180,
             "clinical_pressure_labels_used_for_selection": False,
+            "reference_screening_is_not_combined_baseline_readiness": True,
+            "next_gate": "m6 preflight on raw waveforms before training",
             "previous_metadata_sha256": {
                 name: checksum(previous / name) for name in ("cases.csv", "trks.csv")
             },
@@ -72,7 +97,7 @@ def build(previous: Path, root: Path, count: int = 12, duration: int = 7200) -> 
             numeric = {name: tid for name, tid in ids.items() if not name.startswith("SNUADC/")}
             with ThreadPoolExecutor(max_workers=4) as pool:
                 futures = [
-                    pool.submit(download, client, tid, folder / f"{tid}.csv", duration)
+                    pool.submit(download, client, tid, folder / f"{tid}.csv", duration, budget)
                     for tid in numeric.values()
                 ]
                 for future in futures:
@@ -148,7 +173,7 @@ def build(previous: Path, root: Path, count: int = 12, duration: int = 7200) -> 
             folder = root / f"case-{case['case_id']}"
             with ThreadPoolExecutor(max_workers=3) as pool:
                 futures = [
-                    pool.submit(download, client, tid, folder / f"{tid}.csv", duration)
+                    pool.submit(download, client, tid, folder / f"{tid}.csv", duration, budget)
                     for name, tid in case["track_ids"].items()
                     if name.startswith("SNUADC/")
                 ]
@@ -171,8 +196,21 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--previous", type=Path, required=True)
     parser.add_argument("--root", type=Path, required=True)
+    parser.add_argument("--count", type=int, default=12)
+    parser.add_argument("--duration", type=int, default=7200)
+    parser.add_argument("--exclude-selection", type=Path, action="append", default=[])
+    parser.add_argument("--max-bytes", type=int, default=10 * 1024**3)
+    parser.add_argument("--reserve-bytes", type=int, default=30 * 1024**3)
     args = parser.parse_args()
-    build(args.previous, args.root)
+    build(
+        args.previous,
+        args.root,
+        args.count,
+        args.duration,
+        exclude_selections=tuple(args.exclude_selection),
+        max_bytes=args.max_bytes,
+        reserve_bytes=args.reserve_bytes,
+    )
 
 
 if __name__ == "__main__":

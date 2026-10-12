@@ -1,0 +1,14 @@
+{
+  "B01": {"episode_id": "template-B01", "device_id": "MON-01", "start_ts": 1792252800000},
+  "B02": {"episode_id": "template-B02", "device_id": "MON-02", "start_ts": 1792252800000},
+  "B03": {"episode_id": "template-B03", "device_id": "MON-03", "start_ts": 1792252800000},
+  "B04": {"episode_id": "template-B04", "device_id": "MON-04", "start_ts": 1792252800000},
+  "B05": {"episode_id": "template-B05", "device_id": "MON-05", "start_ts": 1792252800000},
+  "B06": {"episode_id": "template-B06", "device_id": "MON-06", "start_ts": 1792252800000},
+  "B07": {"episode_id": "template-B07", "device_id": "MON-07", "start_ts": 1792252800000},
+  "B08": {"episode_id": "template-B08", "device_id": "MON-08", "start_ts": 1792252800000},
+  "B09": {"episode_id": "template-B09", "device_id": "MON-09", "start_ts": 1792252800000},
+  "B10": {"episode_id": "template-B10", "device_id": "MON-10", "start_ts": 1792252800000},
+  "B11": {"episode_id": "template-B11", "device_id": "MON-11", "start_ts": 1792252800000},
+  "B12": {"episode_id": "template-B12", "device_id": "MON-12", "start_ts": 1792252800000}
+}

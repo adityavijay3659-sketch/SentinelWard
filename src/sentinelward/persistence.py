@@ -130,10 +130,16 @@ class InMemoryStore:
         return due[:limit]
 
     async def mark_outbox_delivered(self, delivery_key: str) -> None:
-        self.outbox[delivery_key]["status"] = "delivered"
+        if self.outbox[delivery_key]["status"] in {"pending", "failed"}:
+            self.outbox[delivery_key]["status"] = "delivered"
+
+    async def outbox_is_pending(self, delivery_key: str) -> bool:
+        return self.outbox[delivery_key]["status"] in {"pending", "failed"}
 
     async def reschedule_outbox(self, delivery_key: str, *, error: str, delay_seconds: int) -> None:
         event = self.outbox[delivery_key]
+        if event["status"] not in {"pending", "failed"}:
+            return
         event["status"] = "failed"
         event["last_error"] = error[:240]
         event["delay_seconds"] = delay_seconds
@@ -327,10 +333,18 @@ class PostgresStore:
         query = """
             UPDATE automation.outbox_events
             SET status = 'delivered', updated_at = now(), last_error = NULL
-            WHERE delivery_key = %s
+            WHERE delivery_key = %s AND status IN ('pending', 'failed')
         """
         async with await psycopg.AsyncConnection.connect(self.database_url) as connection:
             await connection.execute(query, (delivery_key,))
+
+    async def outbox_is_pending(self, delivery_key: str) -> bool:
+        async with await psycopg.AsyncConnection.connect(self.database_url) as connection:
+            cursor = await connection.execute(
+                "SELECT status FROM automation.outbox_events WHERE delivery_key=%s", (delivery_key,)
+            )
+            row = await cursor.fetchone()
+            return row is not None and row[0] in {"pending", "failed"}
 
     async def reschedule_outbox(self, delivery_key: str, *, error: str, delay_seconds: int) -> None:
         query = """
@@ -340,7 +354,7 @@ class PostgresStore:
                 next_attempt_at = now() + make_interval(secs => %s),
                 last_error = %s,
                 updated_at = now()
-            WHERE delivery_key = %s
+            WHERE delivery_key = %s AND status IN ('pending', 'failed')
         """
         async with await psycopg.AsyncConnection.connect(self.database_url) as connection:
             await connection.execute(query, (delay_seconds, error[:240], delivery_key))
