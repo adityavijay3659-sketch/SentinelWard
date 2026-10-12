@@ -117,5 +117,3 @@ async def test_postgres_demo_reset_is_atomic_durable_and_preserves_history() -> 
             (run_id,),
         )
         assert (await cursor.fetchone())[0] == "unknown"
-
-\n

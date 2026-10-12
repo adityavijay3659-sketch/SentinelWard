@@ -66,9 +66,7 @@ def _handler(
     store = InMemoryStore()
     repository = InMemoryDemoRepository(store)
     clock = MutableClock(base)
-    context = EpisodeContext(
-        episode_id="template-only", device_id=f"MON-{bed_id[1:]}", start_ts=0
-    )
+    context = EpisodeContext(episode_id="template-only", device_id=f"MON-{bed_id[1:]}", start_ts=0)
     return DemoM6Handler(repository, {bed_id: context}, clock_ms=clock), repository, store, clock
 
 
@@ -517,5 +515,3 @@ def test_mqtt_subscriptions_keep_requests_separate_from_records() -> None:
     assert ("ward/bed/+/vitals", 0) in client.subscriptions
     assert not any(topic == "ward/record" for topic, _ in client.subscriptions)
     adapter._event_loop.close()
-
-\n

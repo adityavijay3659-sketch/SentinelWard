@@ -112,14 +112,10 @@ async def test_old_run_score_is_recognizable_and_rejected_at_backend_boundary() 
     [current_b] = await store.due_mqtt_outbox()
     current_body = current_b["payload"]["body"]
     assert current_body["extra"]["demo_run_id"] == "run_B"
-    assert backend.consume_m6(
-        str(current_b["payload"]["topic"]), json.dumps(current_body).encode()
-    )
+    assert backend.consume_m6(str(current_b["payload"]["topic"]), json.dumps(current_body).encode())
     assert backend.current_scores["B03"].extra["demo_run_id"] == "run_B"
 
     missing_identity = json.loads(json.dumps(current_body))
     missing_identity["extra"].pop("demo_run_id")
     assert backend.consume_m6(topic, json.dumps(missing_identity).encode()) is False
     assert backend.rejected[-1] == ("B03", "missing_demo_run_id")
-
-\n
