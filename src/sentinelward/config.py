@@ -36,6 +36,7 @@ class Settings(BaseSettings):
     external_effect_mode: Literal["simulate", "live"] = "simulate"
     m6_enabled: bool = False
     demo_lifecycle_enabled: bool = False
+    phase4_config_file: Path | None = None
     m6_contexts_file: Path | None = None
     m6_calibration_file: Path | None = None
     telegram_bot_token: SecretStr | None = None
@@ -48,6 +49,16 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_security(self) -> Settings:
+        if self.phase4_config_file is not None and self.http_host not in {
+            "127.0.0.1",
+            "localhost",
+            "::1",
+        }:
+            raise ValueError("isolated Phase 4 HTTP must bind loopback")
+        if self.phase4_config_file is not None and (
+            self.environment != "test" or not self.demo_lifecycle_enabled
+        ):
+            raise ValueError("isolated Phase 4 requires test profile and enabled demo lifecycle")
         if self.demo_lifecycle_enabled and (
             not self.m6_enabled or self.environment == "design-real"
         ):
@@ -74,6 +85,8 @@ class Settings(BaseSettings):
         return self
 
     def validate_files(self) -> None:
+        if self.phase4_config_file is not None and not self.phase4_config_file.is_file():
+            raise ConfigurationError("Phase 4 configuration file is unavailable")
         if self.m6_enabled:
             for path in (self.m6_contexts_file, self.m6_calibration_file):
                 if path is not None and not path.is_file():

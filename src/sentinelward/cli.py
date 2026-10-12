@@ -43,6 +43,9 @@ from sentinelward.logging_config import configure_logging
 from sentinelward.m6_persistence import PostgresM6Handler, config_from_artifact, load_contexts
 from sentinelward.persistence import PostgresStore
 from sentinelward.phase2_actions import Phase2ActionPort
+from sentinelward.phase4_backend import LocalClinicalReference
+from sentinelward.phase4_factory import build_phase4
+from sentinelward.phase4_reference import create_reference_backend
 from sentinelward.ports import ActionPort
 from sentinelward.scheduler import DurableAlertScheduler, register_escalation_target
 from sentinelward.service import M6Handler, MessageService
@@ -221,7 +224,36 @@ async def serve(settings: Settings) -> None:
         else:
             action_port = simulated_actions
 
-        engine = AutomationEngine(store=store, action_port=action_port, checkpointer=checkpointer)
+        phase4 = (
+            build_phase4(settings.phase4_config_file, settings.database_url)
+            if settings.phase4_config_file
+            else None
+        )
+        if phase4 is not None and alert_coordinator is None:
+            local_clinical = LocalClinicalReference()
+            publisher = MqttAlertPublisher(store)
+            alert_scheduler = DurableAlertScheduler(settings.database_url)
+            alert_coordinator = AlertCoordinator(
+                store=PostgresAlertStore(settings.database_url),
+                publisher=publisher,
+                roster_provider=local_clinical,
+                notifier=local_clinical,
+                waveform_provider=local_clinical,
+                scheduler=alert_scheduler,
+                escalation_seconds=settings.alert_escalation_seconds,
+            )
+            register_escalation_target(alert_coordinator)
+            action_port = Phase2ActionPort(alert_coordinator, simulated_actions)
+        if phase4 is not None and alert_coordinator is not None:
+            phase4.reset_alerts = alert_coordinator.reset_demo
+            phase4.bind_alert_run = alert_coordinator.bind_demo_run
+            prior_agent_state = await phase4.snapshot()
+            alert_coordinator.bind_demo_run(
+                prior_agent_state["run_id"] if prior_agent_state["active"] else None
+            )
+        engine = AutomationEngine(
+            store=store, action_port=action_port, checkpointer=checkpointer, phase4=phase4
+        )
         m6_handler: M6Handler | None = None
         demo_handler: DemoM6Handler | None = None
         if settings.m6_enabled and settings.m6_contexts_file is not None:
@@ -243,6 +275,7 @@ async def serve(settings: Settings) -> None:
             m6_handler=m6_handler,
             demo_handler=demo_handler,
             alert_request_handler=alert_coordinator,
+            phase4=phase4,
         )
         loop = asyncio.get_running_loop()
         mqtt = MqttAdapter(
@@ -258,16 +291,18 @@ async def serve(settings: Settings) -> None:
             ca_file=settings.mqtt_ca_file,
             m6_enabled=settings.m6_enabled,
             demo_enabled=settings.demo_lifecycle_enabled,
+            phase4_enabled=phase4 is not None,
         )
         health.set("mqtt", await mqtt.start())
         poller_task: asyncio.Task[None] | None = None
         outbox_worker: MqttOutboxWorker | None = None
         outbox_task: asyncio.Task[None] | None = None
-        if publisher is not None or settings.m6_enabled:
+        if publisher is not None or settings.m6_enabled or phase4 is not None:
             outbox_worker = MqttOutboxWorker(store, mqtt, health=health)
             outbox_task = asyncio.create_task(outbox_worker.run())
-        if alert_scheduler is not None and telegram_bot is not None and telegram_poller is not None:
+        if alert_scheduler is not None:
             alert_scheduler.start()
+        if telegram_bot is not None and telegram_poller is not None:
             await telegram_bot.initialize()
             health.set("telegram", True)
             poller_task = asyncio.create_task(telegram_poller.run())
@@ -275,12 +310,23 @@ async def serve(settings: Settings) -> None:
             health,
             alerts=alert_coordinator,
             demo=demo_handler,
+            phase4=phase4,
             service_token=(
                 settings.backend_service_token.get_secret_value()
                 if settings.backend_service_token
                 else None
             ),
         )
+        if phase4 is not None:
+            if settings.backend_service_token is None:
+                raise RuntimeError("isolated Phase 4 internal API requires a service token")
+            application.mount(
+                "/",
+                create_reference_backend(
+                    phase4,
+                    service_token=settings.backend_service_token.get_secret_value(),
+                ),
+            )
         server = uvicorn.Server(
             uvicorn.Config(
                 application,
@@ -295,9 +341,22 @@ async def serve(settings: Settings) -> None:
         demo_monitor = (
             asyncio.create_task(monitor_demo_lifecycle(demo_handler)) if demo_handler else None
         )
+
+        async def advance_phase4() -> None:
+            assert phase4 is not None
+            while True:
+                await phase4.advance()
+                await phase4.flush_timelines()
+                await asyncio.sleep(1)
+
+        phase4_monitor = asyncio.create_task(advance_phase4()) if phase4 else None
         try:
             await server.serve()
         finally:
+            if phase4_monitor is not None:
+                phase4_monitor.cancel()
+                with suppress(asyncio.CancelledError):
+                    await phase4_monitor
             if demo_monitor is not None:
                 demo_monitor.cancel()
                 with suppress(asyncio.CancelledError):

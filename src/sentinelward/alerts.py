@@ -66,6 +66,7 @@ class AlertRecord(BaseModel):
     active: bool = True
     normal_seen: bool = False
     ack_finalized: bool = False
+    demo_run_id: str | None = None
 
     def wire(self) -> AlertMessage:
         return AlertMessage(
@@ -202,10 +203,39 @@ class AlertCoordinator:
         self._escalation_seconds = escalation_seconds
         self._clock = clock
         self._transition_lock = asyncio.Lock()
+        self._demo_run_id: str | None = None
+
+    def bind_demo_run(self, run_id: str | None) -> None:
+        self._demo_run_id = run_id
 
     async def handle_verdict(self, verdict: VerdictMessage) -> AlertRecord | None:
         async with self._transition_lock:
             return await self._handle_verdict(verdict)
+
+    async def reset_demo(self, start_ts: int, bed_ids: list[str]) -> None:
+        """Retire only alerts created by the closing demo, preserving their audit."""
+        async with self._transition_lock:
+            for bed_id in bed_ids:
+                alert = await self._store.get_active_alert(bed_id)
+                if (
+                    alert is None
+                    or alert.created_ts < start_ts
+                    or self._demo_run_id is None
+                    or alert.demo_run_id != self._demo_run_id
+                ):
+                    continue
+                await self._scheduler.cancel(alert.alert_id)
+                retire = getattr(self._publisher, "retire_alert", None)
+                if retire is not None:
+                    await retire(alert.alert_id)
+                await self._store.save_alert(
+                    alert.model_copy(
+                        update={
+                            "active": False,
+                            "next_escalation_ts": None,
+                        }
+                    )
+                )
 
     async def _handle_verdict(self, verdict: VerdictMessage) -> AlertRecord | None:
         if verdict.verdict in {Verdict.NORMAL, Verdict.DEVICE_ATTACK}:
@@ -215,6 +245,8 @@ class AlertCoordinator:
         assert verdict.priority != "none"
 
         current = await self._store.get_active_alert(verdict.bed_id)
+        if current is not None and current.demo_run_id != self._demo_run_id:
+            raise ValueError("active alert belongs to another lifecycle scope")
         timestamp = self._clock()
         is_high = verdict.priority == "high"
         if current is None:
@@ -227,6 +259,7 @@ class AlertCoordinator:
                 priority=verdict.priority,
                 text=message_for(verdict.verdict, verdict.bed_id, verdict.reasons),
                 reasons=list(verdict.reasons),
+                demo_run_id=self._demo_run_id,
                 recipients=recipients,
                 ladder_step=1,
                 status="open",
@@ -320,6 +353,8 @@ class AlertCoordinator:
     ) -> AlertRecord:
         async with self._transition_lock:
             alert = await self._require_alert(alert_id)
+            if not alert.active and not alert.acked_by:
+                raise ValueError("alert belongs to a retired episode")
             if alert.roster is not None and by not in alert.roster.all_staff:
                 raise PermissionError(
                     "acknowledging staff member is not on the current alert roster"
@@ -331,6 +366,8 @@ class AlertCoordinator:
     async def escalate(self, alert_id: str, *, by: str, at_ms: int, event_id: str) -> AlertRecord:
         async with self._transition_lock:
             alert = await self._require_alert(alert_id)
+            if not alert.active:
+                raise ValueError("alert belongs to a retired episode")
             if alert.roster is not None and by not in alert.roster.all_staff:
                 raise PermissionError("escalating staff member is not on the current alert roster")
             if not await self._store.record_callback(event_id, alert_id):

@@ -31,12 +31,14 @@ class MqttAdapter:
         ca_file: Path | None = None,
         m6_enabled: bool = False,
         demo_enabled: bool = False,
+        phase4_enabled: bool = False,
     ) -> None:
         self._host = host
         self._port = port
         self._keepalive = keepalive
         self._m6_enabled = m6_enabled
         self._demo_enabled = demo_enabled
+        self._phase4_enabled = phase4_enabled
         self._handler = handler
         self._event_loop = event_loop
         self._connected = asyncio.Event()
@@ -107,6 +109,8 @@ class MqttAdapter:
             subscriptions.append(("ward/bed/+/vitals", 0))
         if self._demo_enabled:
             subscriptions.append(("ward/demo/control", 1))
+        if self._phase4_enabled:
+            subscriptions.extend([("ward/action", 1), ("ward/alert", 1)])
         result, _ = client.subscribe(subscriptions)
         if result == mqtt.MQTT_ERR_SUCCESS:
             self._event_loop.call_soon_threadsafe(self._connected.set)

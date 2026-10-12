@@ -87,6 +87,8 @@ Human output is one line of at most 160 characters; machine JSON preserves all f
 - [Phase 3 completion checklist](docs/phase-3-checklist.md)
 - [Current verification evidence](docs/phase-3-verification.md)
 - [Doc 00 v1.1 demo lifecycle integration](docs/demo-v1.1-integration.md)
+- [Phase 4 implementation and local acceptance](docs/phase-4-plan.md)
+- [Phase 4 contracts and isolated runbook](docs/phase-4-runbook.md)
 - [Detailed new-chat continuation handoff](docs/new-chat-handoff-2026-10-09.txt)
 - [Publication verification](docs/publication-verification-2026-10-09.md)
 - [Operations runbook](docs/runbook.md)

@@ -22,6 +22,9 @@ class MqttPublisherPort(Protocol):
 class MqttAlertPublisher:
     store: FoundationStore
 
+    async def retire_alert(self, alert_id: str) -> None:
+        await self.store.retire_alert_outbox(alert_id)
+
     async def publish_alert(self, alert: AlertMessage) -> None:
         body = alert.model_dump(mode="json")
         await self._enqueue(

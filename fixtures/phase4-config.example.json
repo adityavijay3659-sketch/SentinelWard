@@ -1,0 +1,18 @@
+{
+  "v": 1,
+  "isolated_lab": true,
+  "inventory": [
+    {
+      "device_id": "MON-01", "bed_id": "B01",
+      "username": "MON-01", "client_id": "MON-01",
+      "model": "LabMon-A", "firmware": "fixture-1", "lab_owned": true
+    }
+  ],
+  "broker": {
+    "host": "127.0.0.1", "port": 18883,
+    "admin_username": "p4-admin", "admin_password": "replace-in-local-secret-file",
+    "cleanup_username": "p4-cleanup", "cleanup_password": "replace-in-local-secret-file"
+  },
+  "evidence_root": "C:/Users/Aditya/SentinelWard-Phase4-Lab/evidence",
+  "containment_policy": null
+}

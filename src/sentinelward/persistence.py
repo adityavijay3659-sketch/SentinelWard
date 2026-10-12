@@ -136,6 +136,11 @@ class InMemoryStore:
     async def outbox_is_pending(self, delivery_key: str) -> bool:
         return self.outbox[delivery_key]["status"] in {"pending", "failed"}
 
+    async def retire_alert_outbox(self, alert_id: str) -> None:
+        for event in self.outbox.values():
+            if event["correlation_id"] == alert_id and event["status"] in {"pending", "failed"}:
+                event.update(status="unknown", last_error="demo alert retired; retained for audit")
+
     async def reschedule_outbox(self, delivery_key: str, *, error: str, delay_seconds: int) -> None:
         event = self.outbox[delivery_key]
         if event["status"] not in {"pending", "failed"}:
@@ -151,6 +156,15 @@ class InMemoryStore:
 @dataclass(frozen=True, slots=True)
 class PostgresStore:
     database_url: str
+
+    async def retire_alert_outbox(self, alert_id: str) -> None:
+        async with await psycopg.AsyncConnection.connect(self.database_url) as connection:
+            await connection.execute(
+                """UPDATE automation.outbox_events SET status='unknown',updated_at=now(),
+                last_error='demo alert retired; retained for audit'
+                WHERE correlation_id=%s AND status IN ('pending','failed')""",
+                (alert_id,),
+            )
 
     async def record_ingress(
         self,
