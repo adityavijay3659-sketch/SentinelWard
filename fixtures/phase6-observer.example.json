@@ -1,0 +1,18 @@
+{
+  "v": 1,
+  "run_id": "REPLACE_WITH_ACTUAL_RUN_ID",
+  "duration_s": 1260,
+  "broker": {
+    "host": "127.0.0.1",
+    "port": 18883,
+    "username": "p4-observer",
+    "password_env": "PHASE6_OBSERVER_PASSWORD",
+    "tls": false,
+    "ca_file": null
+  },
+  "probes": [
+    {"id": "service-live", "url": "http://127.0.0.1:8088/health/live", "token_env": null},
+    {"id": "lifecycle", "url": "http://127.0.0.1:8088/internal/v1/demo/status", "token_env": "SENTINEL_BACKEND_SERVICE_TOKEN"}
+  ],
+  "pids": []
+}

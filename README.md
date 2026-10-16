@@ -4,19 +4,22 @@ SentinelWard is Team TessNova's IBM Z Datathon 2026 project: a real-time system 
 
 ## Repository status
 
-This repository contains the Phase 1 foundation, Phase 2 A1 alerts and Phase 3 M6
-research implementation. The current checkout is on `phase/2-a1-alerts`.
+This repository contains the Phase 1–5 local implementation and Phase 6 verification
+tools. The latest implementation branch is `phase/6-verification`, building on
+`phase/5-narrative-agents`. The latest full local run passed 245 tests with zero failures
+or skips; LinuxONE and connected-team acceptance remain pending. Phase 7 stays separate.
+Production M6 is frozen; C1 remains isolated and unmerged.
 Local checks and live/team acceptance gates are recorded separately in each phase checklist.
 
 - Phase 1 implementation began on **8 October 2026** at Aditya's explicit direction.
 - The initial Phase 0 commit was pushed after Aditya's approval; commit or push subsequent changes only on explicit request.
 - Toy learning exercises must remain outside this repository and must not use SentinelWard logic or data.
-- The locked team contract remains `Doc 00 v1`. Files here explain and validate it; they do not silently replace it.
+- The locked team contract is `Doc 00 v1.1`; wire payloads retain `v=1`. Files here explain and validate it; they do not silently replace it.
 
 ## Phase 2 quick start
 
 ```powershell
-uv sync --extra dev
+uv sync --frozen --extra dev
 uv run sentinelward validate-config
 uv run pytest
 ```
@@ -31,6 +34,10 @@ uv run sentinelward smoke-test
 ```
 
 ## Phase 3 quick start
+
+The following commands document the historical research harness. The current M6
+research cycle is closed; use the Phase 6 operator guide for verification without new
+calibration, training or algorithm experiments.
 
 ```powershell
 uv run sentinelward m6 demo --report D:/m6-synthetic-report.json
@@ -89,6 +96,14 @@ Human output is one line of at most 160 characters; machine JSON preserves all f
 - [Doc 00 v1.1 demo lifecycle integration](docs/demo-v1.1-integration.md)
 - [Phase 4 implementation and local acceptance](docs/phase-4-plan.md)
 - [Phase 4 contracts and isolated runbook](docs/phase-4-runbook.md)
+- [Phase 5 final plan](docs/phase-5-plan.md)
+- [Phase 5 contracts](docs/phase-5-contracts.md)
+- [Phase 5 operation and team smoke test](docs/phase-5-runbook.md)
+- [Phase 5 measured verification and limitations](docs/phase-5-verification.md)
+- [Phase 6 verification plan](docs/phase-6-plan.md)
+- [Phase 6 LinuxONE instructions for the operator](docs/phase-6-linuxone-operator-guide.md)
+- [Phase 6 coverage and external-owner checklist](docs/phase-6-checklist.md)
+- [Phase 6 measured verification](docs/phase-6-verification.md)
 - [Detailed new-chat continuation handoff](docs/new-chat-handoff-2026-10-09.txt)
 - [Publication verification](docs/publication-verification-2026-10-09.md)
 - [Operations runbook](docs/runbook.md)
