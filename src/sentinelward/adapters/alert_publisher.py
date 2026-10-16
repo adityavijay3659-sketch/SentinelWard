@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import Literal, Protocol
 
@@ -21,6 +22,7 @@ class MqttPublisherPort(Protocol):
 @dataclass(slots=True)
 class MqttAlertPublisher:
     store: FoundationStore
+    on_alert: Callable[[AlertMessage], Awaitable[None]] | None = None
 
     async def retire_alert(self, alert_id: str) -> None:
         await self.store.retire_alert_outbox(alert_id)
@@ -33,6 +35,8 @@ class MqttAlertPublisher:
             correlation_id=alert.alert_id,
             identity=f"alert:{alert.alert_id}:{alert.ts}:{alert.ladder_step}:{alert.status}",
         )
+        if self.on_alert is not None:
+            await self.on_alert(alert)
 
     async def publish_action(
         self,

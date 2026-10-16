@@ -7,6 +7,7 @@ from langgraph.graph.state import CompiledStateGraph
 
 from sentinelward.contracts import ActionRequest, ActionResult, VerdictMessage
 from sentinelward.phase4 import Phase4Coordinator
+from sentinelward.phase5 import Phase5Coordinator
 from sentinelward.policy import authorize
 from sentinelward.ports import ActionPort, FoundationStore
 from sentinelward.router import route_verdict
@@ -28,10 +29,12 @@ class AutomationEngine:
         action_port: ActionPort,
         checkpointer: Any | None = None,
         phase4: Phase4Coordinator | None = None,
+        phase5: Phase5Coordinator | None = None,
     ) -> None:
         self._store = store
         self._action_port = action_port
         self._phase4 = phase4
+        self._phase5 = phase5
         builder = StateGraph(WorkflowState)
         builder.add_node("route", self._route_node)
         builder.add_node("authorize_and_execute", self._execute_node)
@@ -135,6 +138,8 @@ class AutomationEngine:
         assert self._phase4 is not None
         message = VerdictMessage.model_validate(state["verdict"])
         effects = await self._phase4.handle_verdict(message)
+        if self._phase5 is not None:
+            await self._phase5.observe_verdict(message)
         results = list(state.get("results", []))
         results.extend(effects)
         failed = any(e["status"] in {"unknown", "failed", "pending"} for e in effects)

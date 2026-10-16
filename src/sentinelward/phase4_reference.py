@@ -13,6 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sentinelward.contracts import RecordMessage
 from sentinelward.phase4 import Phase4Coordinator
 from sentinelward.phase4_state import Authorization
+from sentinelward.phase5 import Phase5Coordinator
 
 
 class RecordProjection:
@@ -23,8 +24,25 @@ class RecordProjection:
     async def consume(self, message: RecordMessage, run_id: str | None) -> bool:
         async with self.lock:
             revision = message.data.get("revision")
-            if message.kind not in {"incident", "ticket"} or message.data.get("run_id") != run_id:
+            if message.data.get("run_id") != run_id:
                 return False
+            if message.kind in {"report", "workload", "briefing"}:
+                from sentinelward.phase5_contracts import (
+                    BriefingData,
+                    Phase5Record,
+                    ReportData,
+                    WorkloadData,
+                )
+
+                models: dict[str, type[Phase5Record]] = {
+                    "report": ReportData,
+                    "workload": WorkloadData,
+                    "briefing": BriefingData,
+                }
+                try:
+                    models[message.kind].model_validate(message.data)
+                except ValueError:
+                    return False
             if type(revision) is not int or revision < 1:
                 return False
             prior = self.records.get(message.record_id)
@@ -46,10 +64,15 @@ def create_reference_backend(
     *,
     service_token: str,
     staff_tokens: dict[str, tuple[str, str]] | None = None,
+    phase5: Phase5Coordinator | None = None,
 ) -> FastAPI:
     app = FastAPI(title="TEST ONLY Phase 4 backend reference", docs_url=None)
     projection = RecordProjection()
     app.state.record_projection = projection
+    if phase5 is not None:
+        from sentinelward.phase5_api import reference_router
+
+        app.include_router(reference_router(phase5, staff_tokens=staff_tokens or {}))
 
     def principal(header: str | None, *, service: bool = False) -> tuple[str, str]:
         scheme, _, token = (header or "").partition(" ")
@@ -140,13 +163,18 @@ def create_reference_backend(
     async def actions(authorization: Annotated[str | None, Header()] = None) -> dict[str, Any]:
         principal(authorization)
         state = await agent.snapshot()
+        phase5_actions = []
+        if phase5 is not None:
+            async with phase5.repository.transaction() as unit:
+                phase5_actions = [copy.deepcopy(row) for _, row in unit.list("action")]
         return {
             "reference_only": True,
             "actions": [
                 copy.deepcopy(e)
                 for e in state["effects"].values()
                 if e.get("run_id") == state["run_id"]
-            ],
+            ]
+            + phase5_actions,
         }
 
     @app.get("/api/incidents/{incident_id}")

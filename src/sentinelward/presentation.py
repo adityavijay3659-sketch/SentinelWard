@@ -252,6 +252,14 @@ def user_event_label(verdict: Verdict) -> str:
 
 
 def wire_output_views(message: WireMessage, routed_agents: Iterable[str] = ()) -> OutputViews:
+    if (
+        isinstance(message, RecordMessage)
+        and message.kind in {"report", "workload", "briefing"}
+        and message.data.get("schema_version") == 1
+    ):
+        from sentinelward.phase5_presentation import record_views
+
+        return record_views(message)
     if isinstance(message, AlertMessage):
         user = render_user_alert(message)
         team = render_alert(message)

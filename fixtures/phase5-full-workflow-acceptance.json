@@ -1,0 +1,17 @@
+{
+  "fixture_set": "phase5-full-workflows-1",
+  "scope": "Predeclared fictional engineering workflows, no clinical validation",
+  "required_repetitions": 3,
+  "cases": [
+    {"name":"report_complete","kind":"report","beds":3,"complete":true,"urgent":false,"facts":5,"budget_s":120},
+    {"name":"report_incomplete","kind":"report","beds":3,"complete":false,"urgent":false,"facts":5,"budget_s":120},
+    {"name":"briefing_normal","kind":"briefing","beds":3,"complete":false,"urgent":false,"facts":15,"budget_s":120},
+    {"name":"briefing_urgent","kind":"briefing","beds":3,"complete":false,"urgent":true,"facts":15,"budget_s":120},
+    {"name":"briefing_8_beds","kind":"briefing","beds":8,"complete":false,"urgent":false,"facts":30,"budget_s":120},
+    {"name":"briefing_12_beds","kind":"briefing","beds":12,"complete":false,"urgent":true,"facts":42,"budget_s":120}
+  ],
+  "scheduled_cases": [
+    {"name":"scheduled_3_beds","kind":"briefing","beds":3,"complete":false,"urgent":true,"facts":15,"budget_s":45},
+    {"name":"scheduled_12_beds","kind":"briefing","beds":12,"complete":false,"urgent":true,"facts":42,"budget_s":45}
+  ]
+}

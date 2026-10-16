@@ -21,6 +21,7 @@ from sentinelward.contracts import (
 from sentinelward.errors import ContractError
 from sentinelward.health import HealthRegistry
 from sentinelward.phase4 import Phase4Coordinator
+from sentinelward.phase5 import Phase5Coordinator
 from sentinelward.ports import FoundationStore, WorkflowEngine
 
 LOGGER = logging.getLogger(__name__)
@@ -54,6 +55,7 @@ class MessageService:
     demo_handler: DemoControlHandler | None = None
     alert_request_handler: AlertRequestHandler | None = None
     phase4: Phase4Coordinator | None = None
+    phase5: Phase5Coordinator | None = None
 
     async def handle(self, topic: str, payload: bytes) -> bool:
         if self.phase4 is not None and (
@@ -148,7 +150,11 @@ class MessageService:
             else:
                 if self.phase4 is not None:
                     try:
-                        await self.phase4.handle_request(message)
+                        handled = self.phase5 is not None and await self.phase5.handle_request(
+                            message, gate_held=True
+                        )
+                        if not handled:
+                            await self.phase4.handle_request(message)
                     except (PermissionError, LookupError, ValueError) as exc:
                         await self.store.record_dead_letter(
                             topic=topic,
@@ -224,4 +230,6 @@ class MessageService:
         await self.store.mark_ingress_processed(idempotency_key)
         if self.phase4 is not None:
             await self.phase4.flush_timelines()
+        if self.phase5 is not None:
+            await self.phase5.observe_lifecycle()
         return True

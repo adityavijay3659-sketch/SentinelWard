@@ -37,6 +37,7 @@ class Settings(BaseSettings):
     m6_enabled: bool = False
     demo_lifecycle_enabled: bool = False
     phase4_config_file: Path | None = None
+    phase5_config_file: Path | None = None
     m6_contexts_file: Path | None = None
     m6_calibration_file: Path | None = None
     telegram_bot_token: SecretStr | None = None
@@ -49,6 +50,10 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_security(self) -> Settings:
+        if self.phase5_config_file is not None and (
+            self.phase4_config_file is None or self.backend_service_token is None
+        ):
+            raise ValueError("Phase 5 requires isolated Phase 4 and authenticated backend commands")
         if self.phase4_config_file is not None and self.http_host not in {
             "127.0.0.1",
             "localhost",
@@ -85,6 +90,8 @@ class Settings(BaseSettings):
         return self
 
     def validate_files(self) -> None:
+        if self.phase5_config_file is not None and not self.phase5_config_file.is_file():
+            raise ConfigurationError("Phase 5 configuration file is unavailable")
         if self.phase4_config_file is not None and not self.phase4_config_file.is_file():
             raise ConfigurationError("Phase 4 configuration file is unavailable")
         if self.m6_enabled:

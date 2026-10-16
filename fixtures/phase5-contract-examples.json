@@ -1,0 +1,31 @@
+{
+  "fixture_set": "phase5-v1-fictional",
+  "grant": {
+    "request_id": "confirm-example",
+    "principal": {"by": "staff:example-it", "role": "it"},
+    "run_id": "demo-example",
+    "action": "confirm_report",
+    "target_id": "incident-example",
+    "expires_ts": 1000010000
+  },
+  "confirm_report": {
+    "v": 1, "request_id": "confirm-example", "by": "staff:example-it",
+    "run_id": "demo-example", "ts": 1000000000, "expected_revision": 0,
+    "noticed_ts": 1000000000, "notice_reason": "Fictional IT-reviewed notice"
+  },
+  "generate_briefing": {
+    "v": 1, "request_id": "briefing-example", "by": "staff:example-nurse",
+    "run_id": "demo-example", "ts": 1000060000, "expected_revision": 0,
+    "since": 1000000000
+  },
+  "coverage": {
+    "receipt_id": "coverage-example", "run_id": "demo-example", "bed_id": "B01",
+    "start_ts": 1000000000, "end_ts": 1000003000,
+    "state": "trusted", "source": "backend"
+  },
+  "suppression": {
+    "receipt_id": "suppression-example", "run_id": "demo-example", "bed_id": "B01",
+    "alarm_id": "alarm-example", "ts": 1000001000,
+    "decision_id": "decision-example", "source": "decision"
+  }
+}

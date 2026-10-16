@@ -1,0 +1,14 @@
+{
+  "v": 1,
+  "isolated_lab": true,
+  "staff": {
+    "version": "example-only-1",
+    "nurses": ["staff:example-nurse"],
+    "charge_nurse": null,
+    "valid_until": 253402300799999,
+    "schedule": {"timezone": "Asia/Kolkata", "starts": []}
+  },
+  "report_profile": {"organisation": "FICTIONAL DEMO", "sector": "Health"},
+  "staff_credentials": [],
+  "writer": null
+}

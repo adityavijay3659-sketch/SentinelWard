@@ -47,6 +47,7 @@ class Phase4Coordinator:
     clock_ms: Callable[[], int] = field(default=lambda: time.time_ns() // 1_000_000)
     reset_alerts: Callable[[int, list[str]], Awaitable[None]] | None = None
     bind_alert_run: Callable[[str | None], None] | None = None
+    after_control: Callable[[DemoControlMessage], Awaitable[None]] | None = None
     _lock: asyncio.Lock = field(default_factory=asyncio.Lock)
     lifecycle_gate: asyncio.Lock = field(default_factory=asyncio.Lock)
 
@@ -101,6 +102,8 @@ class Phase4Coordinator:
             async with self.repository.transaction() as unit:
                 prior = copy.deepcopy(unit.state)
                 if prior.control_digest == digest:
+                    if self.after_control is not None:
+                        await self.after_control(command)
                     return
                 if command.ts <= prior.control_ts:
                     raise ValueError("stale agent control")
@@ -177,6 +180,8 @@ class Phase4Coordinator:
                 unit.audits.append(("phase4.control", "backend", command.model_dump(mode="json")))
             if self.bind_alert_run is not None:
                 self.bind_alert_run(command.run_id if command.cmd == "run" else None)
+            if self.after_control is not None:
+                await self.after_control(command)
 
     async def observe(self, message: VitalsMessage | VerdictMessage) -> None:
         async with self._lock, self.repository.transaction() as unit:

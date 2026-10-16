@@ -1,5 +1,7 @@
 # SentinelWard demo v1.1 reset ownership
 
+Historical Phase 3 boundary audit. The table below is a pre-Phase-4 snapshot. Local A1/A2/A3/A4/A6 behavior is superseded by [Phase 4 verification](phase-4-verification.md). Local A5/A7/A8 behavior is superseded by [Phase 5 verification](phase-5-verification.md): new runs have isolated facts/cursors/jobs/workload; old generation/outbox work is retired; report clocks, attestations and audit remain. Deployed owner reset acceptance stays external.
+
 This table distinguishes code proven in this repository from reset work owned elsewhere. A demo reset must preserve historical audit and record data while removing live state that could contaminate the next run.
 
 | Component | Current evidence/status | Required reset behavior | Classification |

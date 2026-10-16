@@ -1,0 +1,559 @@
+{
+  "date": "2026-10-16",
+  "scope": "Local fictional engineering evidence; no clinical validation",
+  "core_template_profile_ready": true,
+  "larger_workflow_model_gate_pass": true,
+  "model_enabled_local_contention_gate_pass": true,
+  "model_enabled_deployment_ready": false,
+  "historical_before_recovery": {
+    "date": "2026-10-15",
+    "scope": "Local fictional engineering evidence, not clinical validation",
+    "small_predeclared_cases": {
+      "cases": 30,
+      "accepted": 30,
+      "fallback": 0,
+      "p50_s": 29.98449999996228,
+      "p95_s": 41.5,
+      "required_cases_pass": true,
+      "accepted_unsupported_claims": 0,
+      "fixture_sha256": "9d08a155c22fd94b2e18bda7a99ec2e21ab6ba894a74128c28cd33ad5a337a56",
+      "model_identity": "granite-phase5:ca71c0faaea5647c6f34bb55d8ae9516e94828e0065cdbbf4680348be2bbbfd3:11433-50569eb87",
+      "limitations": "Controlled fact composition only; fictional engineering fixtures, no clinical accuracy or deployment claim"
+    },
+    "larger_actual_workflows": [
+      {
+        "kind": "report",
+        "state": "fallback",
+        "reason": "ValueError",
+        "elapsed_ms": 68047
+      },
+      {
+        "kind": "briefing",
+        "state": "fallback",
+        "reason": "TimeoutError",
+        "elapsed_ms": 120000
+      }
+    ],
+    "larger_workflow_model_gate_pass": false,
+    "full_suite": {
+      "tests": 209,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "junit_sha256": "6102159c59811302beaf5e02bab91064255fb725727d9698b4fda6a2ac78144e",
+    "startup": {
+      "service_started": true,
+      "internal_unauthenticated": 401,
+      "internal_authenticated": 200,
+      "nurse_briefing_read": 200,
+      "scope": "Actual CLI startup and local HTTP boundary only; no deployed team acceptance"
+    },
+    "granite_process_memory_sample": {
+      "working_set_bytes": 1863090176,
+      "peak_working_set_bytes": 1897619456
+    },
+    "production_m6_sha256": "4b1c9084935a8d253fd00d67f9011c464281d79928cbd9a2f4d7c90d2b66c4c7"
+  },
+  "reference_failure_reproduction": [
+    {
+      "kind": "report",
+      "accepted": false,
+      "error_class": "ValueError",
+      "error_detail": "composition must cover every source fact exactly once",
+      "elapsed_s": 74.79700000002049,
+      "fact_count": 5,
+      "reference_source_sha256": "bbca66407d9253756ad6712642457e7550a8ece7268725cc7151cc685bcb659c"
+    },
+    {
+      "kind": "briefing",
+      "accepted": false,
+      "error_class": "TimeoutError",
+      "error_detail": "",
+      "elapsed_s": 120.06200000003446,
+      "fact_count": 15,
+      "reference_source_sha256": "bbca66407d9253756ad6712642457e7550a8ece7268725cc7151cc685bcb659c"
+    }
+  ],
+  "capacity": [
+    {
+      "case": "report_complete",
+      "facts": 5,
+      "request_bytes": 1247,
+      "token_limit": 512,
+      "legacy_canonical_tokens": 68,
+      "compact_canonical_tokens": 18
+    },
+    {
+      "case": "report_incomplete",
+      "facts": 5,
+      "request_bytes": 1247,
+      "token_limit": 512,
+      "legacy_canonical_tokens": 68,
+      "compact_canonical_tokens": 18
+    },
+    {
+      "case": "briefing_normal",
+      "facts": 15,
+      "request_bytes": 1261,
+      "token_limit": 512,
+      "legacy_canonical_tokens": 203,
+      "compact_canonical_tokens": 28
+    },
+    {
+      "case": "briefing_urgent",
+      "facts": 15,
+      "request_bytes": 1261,
+      "token_limit": 512,
+      "legacy_canonical_tokens": 203,
+      "compact_canonical_tokens": 28
+    },
+    {
+      "case": "briefing_8_beds",
+      "facts": 30,
+      "request_bytes": 1276,
+      "token_limit": 512,
+      "legacy_canonical_tokens": 413,
+      "compact_canonical_tokens": 43
+    },
+    {
+      "case": "briefing_12_beds",
+      "facts": 42,
+      "request_bytes": 1288,
+      "token_limit": 512,
+      "legacy_canonical_tokens": 581,
+      "compact_canonical_tokens": 55
+    }
+  ],
+  "intermediate_phase5_2_acceptance": {
+    "required": 20,
+    "accepted": 19,
+    "failed": 1,
+    "pass": false,
+    "p50_s": 18.272999999986496,
+    "p95_s": 65.06299999996554,
+    "fixture_sha256": "42a7443391641fcb9b1b8771b2b7f3bcf7dc3ba906c258643293a91091ab3182",
+    "model_identity": "granite-phase5:ca71c0faaea5647c6f34bb55d8ae9516e94828e0065cdbbf4680348be2bbbfd3:11433-50569eb87:phase5-2",
+    "scope": "Actual controlled composition through fictional coordinators; no clinical validation"
+  },
+  "pre_stream_phase5_3_acceptance": {
+    "required": 20,
+    "accepted": 20,
+    "failed": 0,
+    "pass": true,
+    "p50_s": 20.01600000000326,
+    "p95_s": 33.93700000003446,
+    "fixture_sha256": "42a7443391641fcb9b1b8771b2b7f3bcf7dc3ba906c258643293a91091ab3182",
+    "model_identity": "granite-phase5:ca71c0faaea5647c6f34bb55d8ae9516e94828e0065cdbbf4680348be2bbbfd3:11433-50569eb87:phase5-3",
+    "scope": "Local full fictional workflows; controlled composition; no clinical validation"
+  },
+  "small_predeclared_cases": {
+    "cases": 30,
+    "accepted": 30,
+    "fallback": 0,
+    "p50_s": 10.25,
+    "p95_s": 16.655999999959022,
+    "required_cases_pass": true,
+    "accepted_unsupported_claims": 0,
+    "fixture_sha256": "9d08a155c22fd94b2e18bda7a99ec2e21ab6ba894a74128c28cd33ad5a337a56",
+    "model_identity": "granite-phase5:ca71c0faaea5647c6f34bb55d8ae9516e94828e0065cdbbf4680348be2bbbfd3:11433-50569eb87:phase5-3",
+    "limitations": "Controlled fact composition only; fictional engineering fixtures, no clinical accuracy or deployment claim"
+  },
+  "strict_full_workflows": {
+    "required": 20,
+    "accepted": 20,
+    "failed": 0,
+    "pass": true,
+    "p50_s": 23.219000000040978,
+    "p95_s": 38.31200000003446,
+    "fixture_sha256": "42a7443391641fcb9b1b8771b2b7f3bcf7dc3ba906c258643293a91091ab3182",
+    "model_identity": "granite-phase5:ca71c0faaea5647c6f34bb55d8ae9516e94828e0065cdbbf4680348be2bbbfd3:11433-50569eb87:phase5-3",
+    "scope": "Local full fictional workflows; controlled composition; no clinical validation"
+  },
+  "additional_cold_scheduled_12_bed": {
+    "required": 1,
+    "accepted": 1,
+    "failed": 0,
+    "pass": true,
+    "p50_s": 38.09400000004098,
+    "p95_s": 38.09400000004098,
+    "fixture_sha256": "7331b1e4efa6c7ce2192e2a694bec1278a12ab4b2e79a0ec15d3522f095eba41",
+    "model_identity": "granite-phase5:ca71c0faaea5647c6f34bb55d8ae9516e94828e0065cdbbf4680348be2bbbfd3:11433-50569eb87:phase5-3",
+    "scope": "Local full fictional workflows; controlled composition; no clinical validation"
+  },
+  "local_contention_unrestricted": {
+    "pass": true,
+    "baseline_median_p95_ms": 62.509600073099136,
+    "model_median_p95_ms": 68.02160001825541,
+    "relative_change_pct": 8.817845480870945,
+    "runs": [
+      {
+        "repeat": 0,
+        "model_enabled": false,
+        "logical_seconds": 1200,
+        "ticks": 1201,
+        "beds": 12,
+        "tick_p50_ms": 16.61170006264001,
+        "tick_p95_ms": 62.509600073099136,
+        "max_tick_ms": 172.38270002417266,
+        "wall_s": 27.35999999998603,
+        "ledger_rows": 15,
+        "model_composition_valid": null
+      },
+      {
+        "repeat": 0,
+        "model_enabled": true,
+        "logical_seconds": 1200,
+        "ticks": 1201,
+        "beds": 12,
+        "tick_p50_ms": 20.19249997101724,
+        "tick_p95_ms": 70.09759999345988,
+        "max_tick_ms": 269.37130000442266,
+        "wall_s": 33.84399999992456,
+        "ledger_rows": 15,
+        "model_composition_valid": true
+      },
+      {
+        "repeat": 1,
+        "model_enabled": true,
+        "logical_seconds": 1200,
+        "ticks": 1201,
+        "beds": 12,
+        "tick_p50_ms": 28.746500029228628,
+        "tick_p95_ms": 68.02160001825541,
+        "max_tick_ms": 256.01300003472716,
+        "wall_s": 40.07799999997951,
+        "ledger_rows": 15,
+        "model_composition_valid": true
+      },
+      {
+        "repeat": 1,
+        "model_enabled": false,
+        "logical_seconds": 1200,
+        "ticks": 1201,
+        "beds": 12,
+        "tick_p50_ms": 16.353199956938624,
+        "tick_p95_ms": 64.4652999471873,
+        "max_tick_ms": 197.41270004305989,
+        "wall_s": 28.141000000061467,
+        "ledger_rows": 15,
+        "model_composition_valid": null
+      },
+      {
+        "repeat": 2,
+        "model_enabled": false,
+        "logical_seconds": 1200,
+        "ticks": 1201,
+        "beds": 12,
+        "tick_p50_ms": 14.914400060661137,
+        "tick_p95_ms": 53.73219994362444,
+        "max_tick_ms": 141.64410007651895,
+        "wall_s": 25.04599999997299,
+        "ledger_rows": 15,
+        "model_composition_valid": null
+      },
+      {
+        "repeat": 2,
+        "model_enabled": true,
+        "logical_seconds": 1200,
+        "ticks": 1201,
+        "beds": 12,
+        "tick_p50_ms": 15.633399947546422,
+        "tick_p95_ms": 55.758000002242625,
+        "max_tick_ms": 169.82690000440925,
+        "wall_s": 27.218999999924563,
+        "ledger_rows": 15,
+        "model_composition_valid": true
+      }
+    ],
+    "scope": "Accelerated Phase 5 lifecycle/ledger, actual concurrent Granite; excludes vitals/MQTT/M6/UI and whole-team timing acceptance."
+  },
+  "pre_stream_local_contention": {
+    "pass": false,
+    "baseline_median_p95_ms": 33.419799990952015,
+    "model_median_p95_ms": 43.079999973997474,
+    "relative_change_pct": 28.90561878186235,
+    "runs": [
+      {
+        "repeat": 0,
+        "model_enabled": false,
+        "logical_seconds": 1200,
+        "ticks": 1201,
+        "beds": 12,
+        "tick_p50_ms": 9.381300071254373,
+        "tick_p95_ms": 26.088500046171248,
+        "max_tick_ms": 93.54080003686249,
+        "wall_s": 13.702999999979511,
+        "ledger_rows": 15,
+        "model_composition_valid": null
+      },
+      {
+        "repeat": 0,
+        "model_enabled": true,
+        "logical_seconds": 1200,
+        "ticks": 1201,
+        "beds": 12,
+        "tick_p50_ms": 8.603000082075596,
+        "tick_p95_ms": 25.80509998369962,
+        "max_tick_ms": 78.04419996682554,
+        "wall_s": 28.28200000000652,
+        "ledger_rows": 15,
+        "model_composition_valid": true
+      },
+      {
+        "repeat": 1,
+        "model_enabled": true,
+        "logical_seconds": 1200,
+        "ticks": 1201,
+        "beds": 12,
+        "tick_p50_ms": 16.02029998321086,
+        "tick_p95_ms": 48.013399937190115,
+        "max_tick_ms": 149.19739996548742,
+        "wall_s": 36.328000000095926,
+        "ledger_rows": 15,
+        "model_composition_valid": true
+      },
+      {
+        "repeat": 1,
+        "model_enabled": false,
+        "logical_seconds": 1200,
+        "ticks": 1201,
+        "beds": 12,
+        "tick_p50_ms": 11.46770000923425,
+        "tick_p95_ms": 47.05190006643534,
+        "max_tick_ms": 1062.0866999961436,
+        "wall_s": 19.344000000040978,
+        "ledger_rows": 15,
+        "model_composition_valid": null
+      },
+      {
+        "repeat": 2,
+        "model_enabled": false,
+        "logical_seconds": 1200,
+        "ticks": 1201,
+        "beds": 12,
+        "tick_p50_ms": 11.331700021401048,
+        "tick_p95_ms": 33.419799990952015,
+        "max_tick_ms": 47.36099997535348,
+        "wall_s": 15.797000000020489,
+        "ledger_rows": 15,
+        "model_composition_valid": null
+      },
+      {
+        "repeat": 2,
+        "model_enabled": true,
+        "logical_seconds": 1200,
+        "ticks": 1201,
+        "beds": 12,
+        "tick_p50_ms": 14.502399950288236,
+        "tick_p95_ms": 43.079999973997474,
+        "max_tick_ms": 84.37539997976273,
+        "wall_s": 27.29700000002049,
+        "ledger_rows": 15,
+        "model_composition_valid": true
+      }
+    ],
+    "scope": "Accelerated Phase 5 lifecycle/ledger, actual concurrent Granite; excludes vitals/MQTT/M6/UI and whole-team timing acceptance."
+  },
+  "local_contention_cpu_isolated": {
+    "pass": false,
+    "baseline_median_p95_ms": 21.27460006158799,
+    "model_median_p95_ms": 50.93579995445907,
+    "relative_change_pct": 139.42071675615364,
+    "runs": [
+      {
+        "repeat": 0,
+        "model_enabled": false,
+        "logical_seconds": 1200,
+        "ticks": 1201,
+        "beds": 12,
+        "tick_p50_ms": 8.556399960070848,
+        "tick_p95_ms": 38.30629994627088,
+        "max_tick_ms": 244.7676999727264,
+        "wall_s": 14.234000000054948,
+        "ledger_rows": 15,
+        "model_composition_valid": null
+      },
+      {
+        "repeat": 0,
+        "model_enabled": true,
+        "logical_seconds": 1200,
+        "ticks": 1201,
+        "beds": 12,
+        "tick_p50_ms": 15.238300082273781,
+        "tick_p95_ms": 50.96160003449768,
+        "max_tick_ms": 118.56809991877526,
+        "wall_s": 33.15599999995902,
+        "ledger_rows": 15,
+        "model_composition_valid": true
+      },
+      {
+        "repeat": 1,
+        "model_enabled": true,
+        "logical_seconds": 1200,
+        "ticks": 1201,
+        "beds": 12,
+        "tick_p50_ms": 12.715199962258339,
+        "tick_p95_ms": 50.93579995445907,
+        "max_tick_ms": 115.27450010180473,
+        "wall_s": 26.25,
+        "ledger_rows": 15,
+        "model_composition_valid": true
+      },
+      {
+        "repeat": 1,
+        "model_enabled": false,
+        "logical_seconds": 1200,
+        "ticks": 1201,
+        "beds": 12,
+        "tick_p50_ms": 6.781900068745017,
+        "tick_p95_ms": 21.27460006158799,
+        "max_tick_ms": 86.55959996394813,
+        "wall_s": 9.702999999979511,
+        "ledger_rows": 15,
+        "model_composition_valid": null
+      },
+      {
+        "repeat": 2,
+        "model_enabled": false,
+        "logical_seconds": 1200,
+        "ticks": 1201,
+        "beds": 12,
+        "tick_p50_ms": 6.549600046128035,
+        "tick_p95_ms": 16.319399932399392,
+        "max_tick_ms": 30.34029994159937,
+        "wall_s": 8.827999999979511,
+        "ledger_rows": 15,
+        "model_composition_valid": null
+      },
+      {
+        "repeat": 2,
+        "model_enabled": true,
+        "logical_seconds": 1200,
+        "ticks": 1201,
+        "beds": 12,
+        "tick_p50_ms": 8.339200052432716,
+        "tick_p95_ms": 28.689500060863793,
+        "max_tick_ms": 100.44389998074621,
+        "wall_s": 26.60999999998603,
+        "ledger_rows": 15,
+        "model_composition_valid": true
+      }
+    ],
+    "scope": "Accelerated Phase 5 lifecycle/ledger, actual concurrent Granite; excludes vitals/MQTT/M6/UI and whole-team timing acceptance."
+  },
+  "cpu_isolation_profile": {
+    "profile": "isolated-local-cpus-1",
+    "logical_processors": 4,
+    "physical_cores": 2,
+    "model_cpu_mask": 12,
+    "coordinator_cpu_mask": 3,
+    "original_model_cpu_mask": 15,
+    "gate_relative_limit_percent": 10,
+    "parameters_changed": false,
+    "original_failed_evidence": "local-load.json"
+  },
+  "coverage_profile_before": {
+    "ticks": 120,
+    "beds": 12,
+    "coverage_rows": 1428,
+    "first_10_median_ms": 3.3846000442281365,
+    "last_10_median_ms": 57.497849978972226
+  },
+  "coverage_profile_after": {
+    "ticks": 120,
+    "beds": 12,
+    "coverage_rows": 12,
+    "first_10_median_ms": 2.620049926918,
+    "last_10_median_ms": 3.323799988720566
+  },
+  "actual_cancellation": {
+    "processing_observed": true,
+    "cancel_s": 0.015000000013969839,
+    "owned_server_idle_after_cancel": true,
+    "job_retired": true,
+    "model_identity": "granite-phase5:ca71c0faaea5647c6f34bb55d8ae9516e94828e0065cdbbf4680348be2bbbfd3:11433-50569eb87:phase5-3",
+    "server_cancel_logged": true,
+    "server_release_after_reset_s": 6.469000000040978,
+    "diagnostic_observation_budget_s": 30,
+    "prior_probe_10s_assertion": "FAILED; server later logged cancel/release"
+  },
+  "nonstream_cancellation_normal_completion": {
+    "processing_observed": true,
+    "cancel_s": 0.03100000007543713,
+    "owned_server_idle_after_cancel": true,
+    "job_retired": true,
+    "model_identity": "granite-phase5:ca71c0faaea5647c6f34bb55d8ae9516e94828e0065cdbbf4680348be2bbbfd3:11433-50569eb87:phase5-3",
+    "server_release_after_reset_s": 34.078000000095926,
+    "diagnostic_observation_budget_s": 30,
+    "prior_probe_10s_assertion": "FAILED; server later logged cancel/release"
+  },
+  "disk_full_attempt": {
+    "Status": "INCOMPLETE_EVIDENCE_DISK_FULL",
+    "Error": "OSError errno 28 while saving cold replay evidence",
+    "CountedAsAccepted": false,
+    "SourceAndScoringChanged": false,
+    "NextRun": "cold-scheduled-03-stream-after-space"
+  },
+  "cleanup": [
+    {
+      "Path": "C:\\Users\\Aditya\\SentinelWard-Phase5-Lab\\wheel-env",
+      "LogicalBytes": 101385689.0,
+      "Reason": "Disposable SentinelWard test/build output"
+    },
+    {
+      "Path": "C:\\Users\\Aditya\\AppData\\Local\\Temp\\pytest-of-Aditya\\pytest-40",
+      "LogicalBytes": 2845.0,
+      "Reason": "Disposable SentinelWard test/build output"
+    },
+    {
+      "Path": "C:\\Users\\Aditya\\AppData\\Local\\Temp\\pytest-of-Aditya\\pytest-41",
+      "LogicalBytes": 582999.0,
+      "Reason": "Disposable SentinelWard test/build output"
+    },
+    {
+      "Path": "C:\\Users\\Aditya\\AppData\\Local\\Temp\\pytest-of-Aditya\\pytest-42",
+      "LogicalBytes": 9104.0,
+      "Reason": "Disposable SentinelWard test/build output"
+    },
+    {
+      "Path": "C:\\Users\\Aditya\\SentinelWard\\.mypy_cache",
+      "LogicalBytes": 46248165,
+      "Reason": "Disposable cache removed by first cleanup command; pre-removal size recorded"
+    },
+    {
+      "Path": "C:\\Users\\Aditya\\SentinelWard\\.ruff_cache",
+      "LogicalBytes": 9922,
+      "Reason": "Disposable cache removed by first cleanup command; pre-removal size recorded"
+    },
+    {
+      "Path": "C:\\Users\\Aditya\\SentinelWard\\.pytest_cache",
+      "LogicalBytes": 22064,
+      "Reason": "Disposable cache removed by first cleanup command; pre-removal size recorded"
+    }
+  ],
+  "remaining_scratch_directory": "D:\\SentinelWard-Phase5-Recovery-20261016",
+  "full_suite": {
+    "tests": 229,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "seconds": 198.661
+  },
+  "junit_sha256": "ed15b30bba5c19aef37cf48fa5e56fdc9d0e004e388c43ac288eee2c6b1fe598",
+  "startup": {
+    "service_started": true,
+    "internal_unauthenticated": 401,
+    "internal_authenticated": 200,
+    "nurse_briefing_read": 200,
+    "scope": "Actual CLI and local HTTP only; deployed integration unverified"
+  },
+  "production_m6_sha256": "4b1c9084935a8d253fd00d67f9011c464281d79928cbd9a2f4d7c90d2b66c4c7",
+  "c1_sha256": "ede527738073fb8774406773da4970a8d9ee034caf78fe185f5d2351ecafad9f",
+  "remaining": [
+    "Target-host resource acceptance before model-enabled operation",
+    "Backend/screens/source integration",
+    "LinuxONE model/build/resources",
+    "Whole-team live 20-minute demo"
+  ]
+}

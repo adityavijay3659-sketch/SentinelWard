@@ -46,6 +46,8 @@ from sentinelward.phase2_actions import Phase2ActionPort
 from sentinelward.phase4_backend import LocalClinicalReference
 from sentinelward.phase4_factory import build_phase4
 from sentinelward.phase4_reference import create_reference_backend
+from sentinelward.phase5_api import router as phase5_router
+from sentinelward.phase5_factory import Phase5Configuration, build_phase5
 from sentinelward.ports import ActionPort
 from sentinelward.scheduler import DurableAlertScheduler, register_escalation_target
 from sentinelward.service import M6Handler, MessageService
@@ -251,8 +253,24 @@ async def serve(settings: Settings) -> None:
             alert_coordinator.bind_demo_run(
                 prior_agent_state["run_id"] if prior_agent_state["active"] else None
             )
+        phase5 = (
+            build_phase5(
+                settings.phase5_config_file,
+                settings.database_url,
+                phase4,
+                PostgresAlertStore(settings.database_url),
+            )
+            if settings.phase5_config_file and phase4 is not None
+            else None
+        )
+        if phase5 is not None and publisher is not None:
+            publisher.on_alert = phase5.observe_alert
         engine = AutomationEngine(
-            store=store, action_port=action_port, checkpointer=checkpointer, phase4=phase4
+            store=store,
+            action_port=action_port,
+            checkpointer=checkpointer,
+            phase4=phase4,
+            phase5=phase5,
         )
         m6_handler: M6Handler | None = None
         demo_handler: DemoM6Handler | None = None
@@ -276,6 +294,7 @@ async def serve(settings: Settings) -> None:
             demo_handler=demo_handler,
             alert_request_handler=alert_coordinator,
             phase4=phase4,
+            phase5=phase5,
         )
         loop = asyncio.get_running_loop()
         mqtt = MqttAdapter(
@@ -317,6 +336,10 @@ async def serve(settings: Settings) -> None:
                 else None
             ),
         )
+        if phase5 is not None and settings.backend_service_token is not None:
+            application.include_router(
+                phase5_router(phase5, token=settings.backend_service_token.get_secret_value())
+            )
         if phase4 is not None:
             if settings.backend_service_token is None:
                 raise RuntimeError("isolated Phase 4 internal API requires a service token")
@@ -325,6 +348,15 @@ async def serve(settings: Settings) -> None:
                 create_reference_backend(
                     phase4,
                     service_token=settings.backend_service_token.get_secret_value(),
+                    phase5=phase5,
+                    staff_tokens={
+                        entry.token.get_secret_value(): (entry.principal.by, entry.principal.role)
+                        for entry in Phase5Configuration.model_validate_json(
+                            settings.phase5_config_file.read_bytes()
+                        ).staff_credentials
+                    }
+                    if settings.phase5_config_file
+                    else None,
                 ),
             )
         server = uvicorn.Server(
@@ -350,9 +382,25 @@ async def serve(settings: Settings) -> None:
                 await asyncio.sleep(1)
 
         phase4_monitor = asyncio.create_task(advance_phase4()) if phase4 else None
+        phase5_stop = asyncio.Event()
+
+        async def advance_phase5() -> None:
+            assert phase5 is not None
+            while True:
+                await phase5.advance()
+                await asyncio.sleep(1)
+
+        phase5_monitor = asyncio.create_task(advance_phase5()) if phase5 else None
+        phase5_worker = asyncio.create_task(phase5.run_worker(phase5_stop)) if phase5 else None
         try:
             await server.serve()
         finally:
+            phase5_stop.set()
+            for phase5_task in (phase5_monitor, phase5_worker):
+                if phase5_task is not None:
+                    phase5_task.cancel()
+                    with suppress(asyncio.CancelledError):
+                        await phase5_task
             if phase4_monitor is not None:
                 phase4_monitor.cancel()
                 with suppress(asyncio.CancelledError):
